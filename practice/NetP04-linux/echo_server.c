@@ -73,11 +73,26 @@ int main(int argc, char *argv[]) {
 
 		printf("Client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 		printf("client_fd = %d\n", client_fd);
-		msg_size = recv(client_fd, buf, BUF_LEN, 0);
-		buf[msg_size] = '\0';
-		printf("Received len=%d : %s", msg_size, buf);
-		send(client_fd, buf, msg_size, 0);
-		printf("Sending len=%d : %s", msg_size, buf);
+		while (1) {
+			msg_size = recv(client_fd, buf, BUF_LEN, 0);
+			if (msg_size <= 0) {
+				printf("recv error\n");
+				break;
+			}
+			buf[msg_size] = '\0'; // 문자열 끝에 NULL를 추가하기 위함
+			printf("Received len=%d : %s", msg_size, buf);
+
+			// 만약 exit이면 종료
+			if (strcmp(buf, "exit\n") == 0)
+				break;
+
+			msg_size = send(client_fd, buf, msg_size, 0);
+			if (msg_size <= 0) {
+				printf("send error\n");
+				break;
+			}
+			printf("Sending len=%d : %s", msg_size, buf);
+		}
 		close(client_fd);
 	}
 	close(server_fd);
