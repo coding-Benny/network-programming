@@ -38,7 +38,7 @@ void init_winsock()
 int main(int argc, char* argv[]) {
 	int s, n, len_in, len_out;
 	struct sockaddr_in server_addr;
-	char* ip_addr = ECHO_SERVER, * port_no = ECHO_PORT;
+	char* ip_addr = ECHO_SERVER, *port_no = ECHO_PORT;
 	char buf[BUF_LEN + 1] = { 0 };
 
 	if (argc == 3) {
@@ -69,30 +69,34 @@ int main(int argc, char* argv[]) {
 		printf("can't connect.\n");
 		exit(0);
 	}
-	/* 키보드 입력을 받음 */
-	printf("Input string : ");
-	if (fgets(buf, BUF_LEN, stdin)) { // gets(buf);
-		len_out = strlen(buf);
-		buf[BUF_LEN] = '\0';
-	}
-	else {
-		printf("fgets error\n");
-		exit(0);
-	}
-	/* echo 서버로 메시지 송신 */
-	printf("Sending len=%d : %s", len_out, buf);
-	if (send(s, buf, len_out, 0) < 0) {
-		printf("send error\n");
-		exit(0);
-	}
+	while (1) {
+		/* 키보드 입력을 받음 */
+		printf("Input string : ");
+		if (fgets(buf, BUF_LEN, stdin)) { // gets(buf);
+			len_out = strlen(buf);
+			buf[BUF_LEN] = '\0';
+		}
+		else {
+			printf("fgets error\n");
+			exit(0);
+		}
+		/* echo 서버로 메시지 송신 */
+		printf("Sending len=%d : %s", len_out, buf);
+		if (send(s, buf, len_out, 0) < 0) {
+			printf("send error\n");
+			exit(0);
+		}
 
-	if ((n = recv(s, buf, BUF_LEN, 0)) < 0) {
-		printf("recv error\n");
-		exit(0);
+		if (strcmp(buf, "exit\n") == 0)
+			break;
+
+		if ((n = recv(s, buf, BUF_LEN, 0)) < 0) {
+			printf("recv error\n");
+			exit(0);
+		}
+		buf[n] = '\0'; // 문자열 끝에 NULL 추가
+		printf("Received len=%d : %s", n, buf);
 	}
-	buf[n] = '\0'; // 문자열 끝에 NULL 추가
-	printf("Received len=%d : %s", n, buf);
 	closesocket(s);
 	return(0);
 }
-

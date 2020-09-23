@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
 	int len, msg_size;
 	char buf[BUF_LEN + 1];
 	unsigned int set = 1;
-	char* ip_addr = ECHO_SERVER, * port_no = ECHO_PORT;
+	char* ip_addr = ECHO_SERVER, *port_no = ECHO_PORT;
 
 	if (argc == 2) {
 		port_no = argv[1];
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
 	}
 	main_socket = server_fd;
 
-	printf("echo_server waiting connection..\n");
+	printf("echo_server1 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
@@ -91,21 +91,26 @@ int main(int argc, char* argv[]) {
 		printf("Client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 		printf("client_fd = %d\n", client_fd);
 
-		//while (1) {
-		msg_size = recv(client_fd, buf, BUF_LEN, 0);
-		if (msg_size <= 0) {
-			printf("recv error\n");
-			break;
+		while (1) {
+			msg_size = recv(client_fd, buf, BUF_LEN, 0);
+			if (msg_size <= 0) {
+				printf("recv error\n");
+				break;
+			}
+			buf[msg_size] = '\0'; // 문자열 끝에 NULL를 추가하기 위함
+			printf("Received len=%d : %s", msg_size, buf);
+			
+			// 만약 exit이면 종료
+			if (strcmp(buf, "exit\n") == 0)
+				break;
+
+			msg_size = send(client_fd, buf, msg_size, 0);
+			if (msg_size <= 0) {
+				printf("send error\n");
+				break;
+			}
+			printf("Sending len=%d : %s", msg_size, buf);
 		}
-		buf[msg_size] = '\0'; // 문자열 끝에 NULL를 추가하기 위함
-		printf("Received len=%d : %s", msg_size, buf);
-		msg_size = send(client_fd, buf, msg_size, 0);
-		if (msg_size <= 0) {
-			printf("send error\n");
-			break;
-		}
-		printf("Sending len=%d : %s", msg_size, buf);
-		//}
 		closesocket(client_fd); // close(client_fd);
 	}
 	closesocket(server_fd); // close(client_fd);
