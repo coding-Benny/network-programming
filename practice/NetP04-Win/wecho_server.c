@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
 	}
 	main_socket = server_fd;
 
-	printf("echo_server2 waiting connection..\n");
+	printf("echo_server3 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
@@ -107,9 +107,12 @@ int main(int argc, char* argv[]) {
 			if (strcmp(buf, "exit\n") == 0)
 				break;
 
-			// 모든 문자열을 대문자로 변환
+			// 대/소문자 상호 교환
 			while (*s) {
-				*s = toupper(*s);
+				if (islower(*s))
+					*s = toupper(*s);
+				else
+					*s = tolower(*s);
 				s++;
 			}
 
