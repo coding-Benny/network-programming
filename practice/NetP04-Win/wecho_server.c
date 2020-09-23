@@ -1,14 +1,15 @@
 /*
-ÆÄÀÏ¸í : wecho_server.c
-±â  ´É : echo ¼­ºñ½º¸¦ ¼öÇàÇÏ´Â ¼­¹ö
-ÄÄÆÄÀÏ : cc -o wecho_server wecho_server.c
-»ç¿ë¹ı : wecho_server [port]
+íŒŒì¼ëª… : wecho_server.c
+ê¸°  ëŠ¥ : echo ì„œë¹„ìŠ¤ë¥¼ ìˆ˜í–‰í•˜ëŠ” ì„œë²„
+ì»´íŒŒì¼ : cc -o wecho_server wecho_server.c
+ì‚¬ìš©ë²• : wecho_server [port]
 */
 #include <winsock.h>
 #include <signal.h>
 #include <stdio.h>
 #include <conio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 WSADATA wsadata;
 int	main_socket;
@@ -25,7 +26,7 @@ void init_winsock()
 	WORD sversion;
 	u_long iMode = 1;
 
-	// winsock »ç¿ëÀ» À§ÇØ ÇÊ¼öÀûÀÓ
+	// winsock ì‚¬ìš©ì„ ìœ„í•´ í•„ìˆ˜ì ì„
 	signal(SIGINT, exit_callback);
 	sversion = MAKEWORD(1, 1);
 	WSAStartup(sversion, &wsadata);
@@ -37,7 +38,7 @@ void init_winsock()
 
 int main(int argc, char* argv[]) {
 	struct sockaddr_in server_addr, client_addr;
-	int server_fd, client_fd;			/* ¼ÒÄÏ¹øÈ£ */
+	int server_fd, client_fd;			/* ì†Œì¼“ë²ˆí˜¸ */
 	int len, msg_size;
 	char buf[BUF_LEN + 1];
 	unsigned int set = 1;
@@ -49,39 +50,39 @@ int main(int argc, char* argv[]) {
 
 	init_winsock();
 
-	/* ¼ÒÄÏ »ı¼º */
+	/* ì†Œì¼“ ìƒì„± */
 	if ((server_fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		printf("Server: Can't open stream socket.");
 		exit(0);
 	}
 	main_socket = server_fd;
 
-	printf("echo_server1 waiting connection..\n");
+	printf("echo_server2 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
-	/* server_addrÀ» '\0'À¸·Î ÃÊ±âÈ­ */
+	/* server_addrì„ '\0'ìœ¼ë¡œ ì´ˆê¸°í™” */
 	memset((char*)&server_addr, 0, sizeof(server_addr));
-	/* server_addr ¼¼ÆÃ */
+	/* server_addr ì„¸íŒ… */
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	server_addr.sin_port = htons(atoi(port_no));
 
-	/* bind() È£Ãâ */
+	/* bind() í˜¸ì¶œ */
 	if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
 		printf("Server: Can't bind local address.\n");
 		exit(0);
 	}
 
-	/* ¼ÒÄÏÀ» ¼öµ¿ ´ë±â¸ğµå·Î ¼¼ÆÃ */
+	/* ì†Œì¼“ì„ ìˆ˜ë™ ëŒ€ê¸°ëª¨ë“œë¡œ ì„¸íŒ… */
 	listen(server_fd, 5);
 
-	/* iterative  echo ¼­ºñ½º ¼öÇà */
+	/* iterative  echo ì„œë¹„ìŠ¤ ìˆ˜í–‰ */
 	printf("Server : waiting connection request.\n");
 	len = sizeof(client_addr);
 
 	while (1) {
-		/* ¿¬°á¿äÃ»À» ±â´Ù¸² */
+		/* ì—°ê²°ìš”ì²­ì„ ê¸°ë‹¤ë¦¼ */
 		client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &len);
 		if (client_fd < 0) {
 			printf("Server: accept failed.\n");
@@ -92,17 +93,25 @@ int main(int argc, char* argv[]) {
 		printf("client_fd = %d\n", client_fd);
 
 		while (1) {
+			char *s = buf;
+
 			msg_size = recv(client_fd, buf, BUF_LEN, 0);
 			if (msg_size <= 0) {
 				printf("recv error\n");
 				break;
 			}
-			buf[msg_size] = '\0'; // ¹®ÀÚ¿­ ³¡¿¡ NULL¸¦ Ãß°¡ÇÏ±â À§ÇÔ
+			buf[msg_size] = '\0'; // ë¬¸ìì—´ ëì— NULLë¥¼ ì¶”ê°€í•˜ê¸° ìœ„í•¨
 			printf("Received len=%d : %s", msg_size, buf);
-			
-			// ¸¸¾à exitÀÌ¸é Á¾·á
+
+			// ë§Œì•½ exitì´ë©´ ì¢…ë£Œ
 			if (strcmp(buf, "exit\n") == 0)
 				break;
+
+			// ëª¨ë“  ë¬¸ìì—´ì„ ëŒ€ë¬¸ìë¡œ ë³€í™˜
+			while (*s) {
+				*s = toupper(*s);
+				s++;
+			}
 
 			msg_size = send(client_fd, buf, msg_size, 0);
 			if (msg_size <= 0) {
