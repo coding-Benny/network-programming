@@ -73,30 +73,73 @@ int main(int argc, char *argv[]) {
 
 		printf("Client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 		printf("client_fd = %d\n", client_fd);
+		
 		while (1) {
+			int opt = -1;
+			char *s = buf;
+			char req[BUF_LEN + 1];
+			char menu[BUF_LEN + 1] = "";
+			char msg[BUF_LEN + 1] = "";
+
 			msg_size = recv(client_fd, buf, BUF_LEN, 0);
+
 			if (msg_size <= 0) {
 				printf("recv error\n");
 				break;
 			}
 			buf[msg_size] = '\0'; // 문자열 끝에 NULL를 추가하기 위함
+
+			strcpy(req, s);
+			strncpy(menu, req, 1);
+			opt = atoi(menu);
+			strncpy(msg, req + 2, strlen(req));
 			printf("Received len=%d : %s", msg_size, buf);
-
-			// 만약 exit이면 종료
-			if (strcmp(buf, "exit\n") == 0)
+			
+			switch (opt)
+			{
+			case 1:
+				// 모든 문자열을 대문자로 변환
+				for (int i = 0; i < strlen(msg); i++) {
+					msg[i] = toupper(msg[i]);
+				}
 				break;
-
-			msg_size = send(client_fd, buf, msg_size, 0);
-			if (msg_size <= 0) {
-				printf("send error\n");
+			case 2:
+				// 모든 문자열을 대문자로 변환
+				for (int i = 0; i < strlen(msg); i++) {
+					msg[i] = tolower(msg[i]);
+				}
+				break;
+			case 3:
+				// 대/소문자 상호 교환
+				for (int i = 0; i < strlen(msg); i++) {
+					if (islower(msg[i]))
+						msg[i] = toupper(msg[i]);
+					else
+						msg[i] = tolower(msg[i]);
+				}
+				break;
+			case 4:
+				printf("\n");
+				break;
+			default:
 				break;
 			}
-			printf("Sending len=%d : %s", msg_size, buf);
+
+			if (opt != 4) {
+				msg_size = send(client_fd, msg, msg_size, 0);
+				if (msg_size <= 0) {
+					printf("send error\n");
+					break;
+				}
+				printf("Sending len=%d : %s", msg_size, msg);
+			}
+			else {
+				break;
+			}
 		}
 		close(client_fd);
 	}
 	close(server_fd);
 	return(0);
 }
-
 
