@@ -36,10 +36,11 @@ void init_winsock()
 #define BUF_LEN 128
 
 int main(int argc, char* argv[]) {
-	int s, n, len_in, len_out;
+	int c, s, n, len_in, len_out;
 	struct sockaddr_in server_addr;
 	char* ip_addr = ECHO_SERVER, *port_no = ECHO_PORT;
 	char buf[BUF_LEN + 1] = { 0 };
+	char req[BUF_LEN + 1] = { 0 };
 
 	if (argc == 3) {
 		ip_addr = argv[1];
@@ -62,7 +63,7 @@ int main(int argc, char* argv[]) {
 	server_addr.sin_port = htons(atoi(port_no));
 
 	/* 연결요청 */
-	printf("Connecting %s %s\n", ip_addr, port_no);
+	printf("Connecting %s %s\n", ip_addr, port_no);	// Connecting 127.0.0.1 30000
 
 	if (connect(s, (struct sockaddr*)&server_addr,
 		sizeof(server_addr)) < 0) {
@@ -70,7 +71,24 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 	while (1) {
-		/* 키보드 입력을 받음 */
+		printf("*** 대/소문자 변환 메뉴입니다. ***\n");
+		printf(" (1) 모두 대문자 변환\n");
+		printf(" (2) 모두 소문자 변환\n");
+		printf(" (3) 대>소 소>대 변환\n");
+		printf(" (4) 종료\n");
+		/* 메뉴 선택 */
+		printf("선택하세요 : ");
+		scanf("%s", req);
+		while ((c = getchar()) != EOF && c != '\n');
+
+		if (strcmp(req, "4") == 0) {
+			if (send(s, req, BUF_LEN, 0) < 0) {
+				printf("send error\n");
+			}
+			exit(0);
+		}
+
+		/* 문자열 입력 */
 		printf("Input string : ");
 		if (fgets(buf, BUF_LEN, stdin)) { // gets(buf);
 			len_out = strlen(buf);
@@ -80,22 +98,22 @@ int main(int argc, char* argv[]) {
 			printf("fgets error\n");
 			exit(0);
 		}
+
+		sprintf(req, "%s %s", req, buf);
+		
 		/* echo 서버로 메시지 송신 */
-		printf("Sending len=%d : %s", len_out, buf);
-		if (send(s, buf, len_out, 0) < 0) {
+		if (send(s, req, BUF_LEN, 0) < 0) {
 			printf("send error\n");
 			exit(0);
 		}
-
-		if (strcmp(buf, "exit\n") == 0)
-			break;
 
 		if ((n = recv(s, buf, BUF_LEN, 0)) < 0) {
 			printf("recv error\n");
 			exit(0);
 		}
+
 		buf[n] = '\0'; // 문자열 끝에 NULL 추가
-		printf("Received len=%d : %s", n, buf);
+		printf("Received len=%d : %s\n", n, buf);
 	}
 	closesocket(s);
 	return(0);
