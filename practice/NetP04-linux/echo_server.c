@@ -8,10 +8,17 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+
+#define NULL 0
 #define BUF_LEN 128
 #define ECHO_SERVER "127.0.0.1"
 #define ECHO_PORT "30000"
+#define USER_ID "hansung"
+#define USER_PWD "computer"
 
 int main(int argc, char *argv[]) {
 	struct sockaddr_in server_addr, client_addr;
@@ -20,6 +27,8 @@ int main(int argc, char *argv[]) {
 	char buf[BUF_LEN+1];
 	unsigned int set = 1;
 	char *ip_addr = ECHO_SERVER, *port_no = ECHO_PORT;
+	char *user_id = USER_ID, *user_pwd = USER_PWD;
+	char *welcome_msg = "Welcome to Server!!";
 
 /*
 	unsigned short s1 = 0x1234;
@@ -74,6 +83,84 @@ int main(int argc, char *argv[]) {
 		printf("Client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 		printf("client_fd = %d\n", client_fd);
 		
+		msg_size = send(client_fd, welcome_msg, BUF_LEN, 0);
+		if (msg_size <= 0) {
+			printf("send error\n");
+			break;
+		}
+		printf("Sending : %s\n", welcome_msg);
+		
+		/* 로그인 */
+		while (1) {
+			int i=0, j=0, k=0;
+			char *s = buf;
+			char *info[2], *val[2];
+			char *id_info, *pwd_info, *input_id, *input_pwd, *p;
+			char str[BUF_LEN + 1] = { 0 };
+			char res[BUF_LEN + 1] = { 0 };
+			char welcome_user[BUF_LEN + 1] = { 0 };
+
+			msg_size = recv(client_fd, buf, BUF_LEN, 0);
+
+			if (msg_size <= 0) {
+				printf("recv error\n");
+				break;
+			}
+			buf[msg_size] = '\0'; // 문자열 끝에 NULL를 추가하기 위함
+
+			printf("Received %s\n", buf);
+
+			/* 문자열 처리 통해 입력한 id와 password 추출 */
+			strcpy(str, s);
+			p = strtok(str, " ");
+			while (p) {
+				info[i++] = p;
+				p = strtok(NULL, " ");
+			}
+			id_info = info[0]; pwd_info = info[1];
+			p = strtok(id_info, "=");
+			while (p) {
+				info[j++] = p;
+				p = strtok(NULL, "=");
+			}
+			input_id = info[1];
+			p = strtok(pwd_info, "=");
+			while (p) {
+				info[k++] = p;
+				p = strtok(NULL, "=");
+			}
+			input_pwd = info[1];
+
+			/* 문자열 비교 결과에 따른 응답 설정 */
+			if (strcmp(input_id, user_id) == 0 && strcmp(input_pwd, user_pwd) == 0) {	// valid
+				sprintf(res, "200 Welcome %s!!\n", input_id);
+			}
+			else {
+				if (strcmp(input_id, user_id) != 0) {	// invalid id(+password)
+					sprintf(res, "401 Invalid ID\n");
+				}
+				else {	// valid id, invalid pwd
+					sprintf(res, "402 Invalid Password\n");
+				}
+			}
+
+			if (strstr(res, "200") != NULL) {
+				strncpy(welcome_user, res + 4, strlen(res));
+				msg_size = send(client_fd, welcome_user, msg_size, 0);
+			}
+			else
+				msg_size = send(client_fd, res, msg_size, 0);
+
+			if (msg_size <= 0) {
+				printf("send error\n");
+				break;
+			}
+			printf("Sending len=%d : %s", msg_size, res);
+
+			if (strstr(res, "Welcome") != NULL)
+				break;
+		}
+		
 		while (1) {
 			int opt = -1;
 			char *s = buf;
@@ -94,7 +181,10 @@ int main(int argc, char *argv[]) {
 			opt = atoi(menu);
 			strncpy(msg, req + 2, strlen(req));
 			printf("Received len=%d : %s", msg_size, buf);
-			
+			if (strstr(buf, "4") != NULL) {
+				printf("\nSession finished for %s.\n", user_id);
+			}
+
 			switch (opt)
 			{
 			case 1:
