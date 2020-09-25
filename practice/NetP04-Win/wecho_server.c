@@ -1,15 +1,17 @@
 /*
-íŒŒì¼ëª… : wecho_server.c
-ê¸°  ëŠ¥ : echo ì„œë¹„ìŠ¤ë¥¼ ìˆ˜í–‰í•˜ëŠ” ì„œë²„
-ì»´íŒŒì¼ : cc -o wecho_server wecho_server.c
-ì‚¬ìš©ë²• : wecho_server [port]
+ÆÄÀÏ¸í : wecho_server.c
+±â  ´É : echo ¼­ºñ½º¸¦ ¼öÇàÇÏ´Â ¼­¹ö
+ÄÄÆÄÀÏ : cc -o wecho_server wecho_server.c
+»ç¿ë¹ı : wecho_server [port]
 */
+#define _CRT_SECURE_NO_WARNINGS
 #include <winsock.h>
 #include <signal.h>
 #include <stdio.h>
 #include <conio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 
 WSADATA wsadata;
 int	main_socket;
@@ -26,7 +28,7 @@ void init_winsock()
 	WORD sversion;
 	u_long iMode = 1;
 
-	// winsock ì‚¬ìš©ì„ ìœ„í•´ í•„ìˆ˜ì ì„
+	// winsock »ç¿ëÀ» À§ÇØ ÇÊ¼öÀûÀÓ
 	signal(SIGINT, exit_callback);
 	sversion = MAKEWORD(1, 1);
 	WSAStartup(sversion, &wsadata);
@@ -38,7 +40,7 @@ void init_winsock()
 
 int main(int argc, char* argv[]) {
 	struct sockaddr_in server_addr, client_addr;
-	int server_fd, client_fd;			/* ì†Œì¼“ë²ˆí˜¸ */
+	int server_fd, client_fd;			/* ¼ÒÄÏ¹øÈ£ */
 	int len, msg_size;
 	char buf[BUF_LEN + 1];
 	unsigned int set = 1;
@@ -50,39 +52,39 @@ int main(int argc, char* argv[]) {
 
 	init_winsock();
 
-	/* ì†Œì¼“ ìƒì„± */
+	/* ¼ÒÄÏ »ı¼º */
 	if ((server_fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		printf("Server: Can't open stream socket.");
 		exit(0);
 	}
 	main_socket = server_fd;
 
-	printf("echo_server3 waiting connection..\n");
+	printf("echo_server4 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
-	/* server_addrì„ '\0'ìœ¼ë¡œ ì´ˆê¸°í™” */
+	/* server_addrÀ» '\0'À¸·Î ÃÊ±âÈ­ */
 	memset((char*)&server_addr, 0, sizeof(server_addr));
-	/* server_addr ì„¸íŒ… */
+	/* server_addr ¼¼ÆÃ */
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	server_addr.sin_port = htons(atoi(port_no));
 
-	/* bind() í˜¸ì¶œ */
+	/* bind() È£Ãâ */
 	if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
 		printf("Server: Can't bind local address.\n");
 		exit(0);
 	}
 
-	/* ì†Œì¼“ì„ ìˆ˜ë™ ëŒ€ê¸°ëª¨ë“œë¡œ ì„¸íŒ… */
+	/* ¼ÒÄÏÀ» ¼öµ¿ ´ë±â¸ğµå·Î ¼¼ÆÃ */
 	listen(server_fd, 5);
 
-	/* iterative  echo ì„œë¹„ìŠ¤ ìˆ˜í–‰ */
+	/* iterative  echo ¼­ºñ½º ¼öÇà */
 	printf("Server : waiting connection request.\n");
 	len = sizeof(client_addr);
 
 	while (1) {
-		/* ì—°ê²°ìš”ì²­ì„ ê¸°ë‹¤ë¦¼ */
+		/* ¿¬°á¿äÃ»À» ±â´Ù¸² */
 		client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &len);
 		if (client_fd < 0) {
 			printf("Server: accept failed.\n");
@@ -93,35 +95,67 @@ int main(int argc, char* argv[]) {
 		printf("client_fd = %d\n", client_fd);
 
 		while (1) {
+			int opt = -1;
 			char *s = buf;
+			char req[BUF_LEN + 1];
+			char menu[BUF_LEN + 1] = "";
+			char msg[BUF_LEN + 1] = "";
 
 			msg_size = recv(client_fd, buf, BUF_LEN, 0);
+
 			if (msg_size <= 0) {
 				printf("recv error\n");
 				break;
 			}
-			buf[msg_size] = '\0'; // ë¬¸ìì—´ ëì— NULLë¥¼ ì¶”ê°€í•˜ê¸° ìœ„í•¨
+			buf[msg_size] = '\0'; // ¹®ÀÚ¿­ ³¡¿¡ NULL¸¦ Ãß°¡ÇÏ±â À§ÇÔ
+
+			strcpy(req, s);
+			strncpy(menu, req, 1);
+			opt = atoi(menu);
+			strncpy(msg, req + 2, strlen(req));
 			printf("Received len=%d : %s", msg_size, buf);
-
-			// ë§Œì•½ exitì´ë©´ ì¢…ë£Œ
-			if (strcmp(buf, "exit\n") == 0)
+			
+			switch (opt)
+			{
+			case 1:
+				// ¸ğµç ¹®ÀÚ¿­À» ´ë¹®ÀÚ·Î º¯È¯
+				for (int i = 0; i < strlen(msg); i++) {
+					msg[i] = toupper(msg[i]);
+				}
 				break;
-
-			// ëŒ€/ì†Œë¬¸ì ìƒí˜¸ êµí™˜
-			while (*s) {
-				if (islower(*s))
-					*s = toupper(*s);
-				else
-					*s = tolower(*s);
-				s++;
+			case 2:
+				// ¸ğµç ¹®ÀÚ¿­À» ´ë¹®ÀÚ·Î º¯È¯
+				for (int i = 0; i < strlen(msg); i++) {
+					msg[i] = tolower(msg[i]);
+				}
+				break;
+			case 3:
+				// ´ë/¼Ò¹®ÀÚ »óÈ£ ±³È¯
+				for (int i = 0; i < strlen(msg); i++) {
+					if (islower(msg[i]))
+						msg[i] = toupper(msg[i]);
+					else
+						msg[i] = tolower(msg[i]);
+				}
+				break;
+			case 4:
+				printf("\n");
+				break;
+			default:
+				break;
 			}
 
-			msg_size = send(client_fd, buf, msg_size, 0);
-			if (msg_size <= 0) {
-				printf("send error\n");
+			if (opt != 4) {
+				msg_size = send(client_fd, msg, msg_size, 0);
+				if (msg_size <= 0) {
+					printf("send error\n");
+					break;
+				}
+				printf("Sending len=%d : %s", msg_size, msg);
+			}
+			else {
 				break;
 			}
-			printf("Sending len=%d : %s", msg_size, buf);
 		}
 		closesocket(client_fd); // close(client_fd);
 	}
