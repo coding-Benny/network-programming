@@ -39,6 +39,9 @@ int main(int argc, char* argv[]) {
 	int c, s, n, len_in, len_out;
 	struct sockaddr_in server_addr;
 	char* ip_addr = ECHO_SERVER, *port_no = ECHO_PORT;
+	char user_info[BUF_LEN + 1] = { 0 };
+	char id[BUF_LEN + 1] = { 0 };
+	char pwd[BUF_LEN + 1] = { 0 };
 	char buf[BUF_LEN + 1] = { 0 };
 	char req[BUF_LEN + 1] = { 0 };
 
@@ -70,6 +73,39 @@ int main(int argc, char* argv[]) {
 		printf("can't connect.\n");
 		exit(0);
 	}
+
+	if ((n = recv(s, buf, BUF_LEN, 0)) < 0) {
+		printf("recv error\n");
+		exit(0);
+	}
+	buf[n] = '\0'; // 문자열 끝에 NULL 추가
+	printf("Received : %s\n", buf);
+
+	while (1) {
+		/* 로그인 */
+		printf("ID : ");
+		scanf("%s", id);
+		printf("Password : ");
+		scanf("%s", pwd);
+		
+		sprintf(user_info, "id=%s pass=%s", id, pwd);
+
+		/* echo 서버로 메시지 송신 */
+		if (send(s, user_info, BUF_LEN, 0) < 0) {
+			printf("send error\n");
+			exit(0);
+		}
+
+		if ((n = recv(s, buf, BUF_LEN, 0)) < 0) {
+			printf("recv error\n");
+			exit(0);
+		}
+		buf[n] = '\0'; // 문자열 끝에 NULL 추가
+		printf("%s", buf);
+		if (strstr(buf, "Welcome") != NULL)
+			break;
+	}
+
 	while (1) {
 		printf("*** 대/소문자 변환 메뉴입니다. ***\n");
 		printf(" (1) 모두 대문자 변환\n");
@@ -100,7 +136,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		sprintf(req, "%s %s", req, buf);
-		
+
 		/* echo 서버로 메시지 송신 */
 		if (send(s, req, BUF_LEN, 0) < 0) {
 			printf("send error\n");
