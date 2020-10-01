@@ -1,4 +1,11 @@
 /*
+ 파일명 : file_client2.c
+ 기  능 : file_clien1에서 filename 먼저 발송
+ 컴파일 : cc -o file_client2 file_client2.c
+ 사용법 : file_client2 [host IP] [port]
+*/
+
+/*
  파일명 : file_client1.c
  기  능 : echo_client1에서 Keyboard 대신 file 을 읽어서 전송
  컴파일 : cc -o file_client1 file_client1.c
@@ -48,9 +55,8 @@ void init_winsock()
 int main(int argc, char* argv[]) {
 	int s, n, len_in, len_out;
 	struct sockaddr_in server_addr;
-	char* ip_addr = ECHO_SERVER, * port_no = ECHO_PORT;
+	char* ip_addr = ECHO_SERVER, *port_no = ECHO_PORT;
 	char buf[BUF_LEN + 1] = { 0 };
-
 
 	if (argc == 3) {
 		ip_addr = argv[1];
@@ -71,8 +77,6 @@ int main(int argc, char* argv[]) {
 	main_socket = s;
 #endif 
 
-
-
 	/* echo 서버의 소켓주소 구조체 작성 */
 	memset((char*)&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
@@ -85,7 +89,8 @@ int main(int argc, char* argv[]) {
 	printf("Enter file name : ");
 	scanf("%s", filename);
 	getchar(); // Enter key 처리.
-	if ((fp = fopen(filename, "r")) == NULL) {
+
+	if ((fp = fopen(filename, "rb")) == NULL) {
 		printf("Can't open file %s\n", filename);
 		exit(0);
 	}
@@ -99,34 +104,29 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 
-	while (1) {
-		/* 파일에서 입력을 받음 */
-		//printf("Input string : ");
-		//if (fgets(buf, BUF_LEN, stdin)) { // gets(buf);
-		if (fgets(buf, BUF_LEN, fp)) {
-			len_out = strlen(buf);
-			buf[BUF_LEN] = '\0';
-		}
-		else {
-			//printf("fgets error\n");
-			printf("\nEnd of file\n");
-			exit(0);
-		}
-		/* echo 서버로 메시지 송신 */
-		printf("Sending len=%d : %s", len_out, buf);
-		if (send(s, buf, len_out, 0) < 0) {
-			printf("send error\n");
-			exit(0);
-		}
-		if (strcmp(buf, "exit\n") == 0)
-			break;
-		if ((n = recv(s, buf, BUF_LEN, 0)) < 0) {
-			printf("recv error\n");
-			exit(0);
-		}
-		buf[n] = '\0'; // 문자열 끝에 NULL 추가
-		printf("Received len=%d : %s", n, buf);
+	// send file name
+	if (send(s, filename, BUF_LEN, 0) <= 0) {	// transmission unit is BUF_LEN
+		printf("filename send error\n");
+		exit(0);
 	}
+
+	// send file contents
+	while (1) {
+		int n;
+		// n = fgets(buf, BUF_LEN, fp);
+		memset(buf, 0, BUF_LEN + 1);
+		n = fread(buf, 1, BUF_LEN, fp);	// read file
+
+		if (n <= 0)	//  End of file ??
+			break;
+		printf("Sending %d bytes : %s\n", n, buf);
+
+		if (send(s, buf, n, 0) <= 0) {	// only read bytes are sent to the network
+			printf("send error\n");
+			break;
+		}
+	}
+	fclose(fp);
 #ifdef WIN32
 	closesocket(s);
 #else
@@ -134,4 +134,3 @@ int main(int argc, char* argv[]) {
 #endif
 	return(0);
 }
-

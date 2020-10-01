@@ -1,9 +1,10 @@
 /*
-파일명 : file_server1.c
-기  능 : file_server1 과 동일
+파일명 : file_server2.c
+기  능 : file_server2 과 동일
 컴파일 : cc -o file_server file_server.c
-사용법 : file_server1 [port]
+사용법 : file_server2 [port]
 */
+
 #ifdef _WIN32
 #include <winsock.h>
 #include <signal.h>
@@ -51,7 +52,7 @@ int main(int argc, char* argv[]) {
 	int len, msg_size;
 	char buf[BUF_LEN + 1];
 	unsigned int set = 1;
-	char* ip_addr = file_SERVER, * port_no = file_PORT;
+	char* ip_addr = file_SERVER, *port_no = file_PORT;
 
 	if (argc == 2) {
 		port_no = argv[1];
@@ -71,7 +72,7 @@ int main(int argc, char* argv[]) {
 	main_socket = server_fd;
 #endif
 
-	printf("file_server1 waiting connection..\n");
+	printf("file_server2 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
@@ -106,24 +107,40 @@ int main(int argc, char* argv[]) {
 		printf("Client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 		printf("client_fd = %d\n", client_fd);
 
+		char filename[BUF_LEN];
+		FILE* fp;
+
+		if (recv(client_fd, filename, BUF_LEN, 0) <= 0) {
+			printf("filename recv error\n");
+			exit(0);
+		}
+
+		printf("Received filename : %s\n", filename);
+
+		if ((fp = fopen(filename, "wb")) == NULL) {
+			printf("file open error\n");
+			exit(0);
+		}
+
 		while (1) {
+			int i, len;
+			memset(buf, 0, BUF_LEN + 1);
 			msg_size = recv(client_fd, buf, BUF_LEN, 0);
 			if (msg_size <= 0) {
-				printf("recv error\n");
+				printf("recv error : end of file\n");
 				break;
 			}
-			buf[msg_size] = '\0'; // 문자열 끝에 NULL를 추가하기 위함
-			printf("Received len=%d : %s", msg_size, buf);
-			// 만약 exit이면 종료
-			if (strcmp(buf, "exit\n") == 0)
-				break;
-			msg_size = send(client_fd, buf, msg_size, 0);
-			if (msg_size <= 0) {
-				printf("send error\n");
+			/*for (int j = 0; j < strlen(buf); j++) {
+				printf("%d: %c\n", j, buf[j]);
+			}*/
+			printf("read data = %d bytes : %s\n", msg_size, buf);
+
+			if (fwrite(buf, msg_size, 1, fp) <= 0) {
+				printf("fwrite error\n");
 				break;
 			}
-			printf("Sending len=%d : %s", msg_size, buf);
 		}
+		fclose(fp);
 #ifdef WIN32
 		closesocket(client_fd);
 #else
@@ -138,4 +155,3 @@ int main(int argc, char* argv[]) {
 #endif	
 	return(0);
 }
-
