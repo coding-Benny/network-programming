@@ -1,16 +1,10 @@
 /*
- 파일명 : file_client2.c
- 기  능 : file_clien1에서 filename 먼저 발송
- 컴파일 : cc -o file_client2 file_client2.c
- 사용법 : file_client2 [host IP] [port]
+ 파일명 : file_client3.c
+ 기  능 : file_clien2에서 filename + filesize 전송
+ 컴파일 : cc -o file_client3 file_client3.c
+ 사용법 : file_client3 [host IP] [port]
 */
 
-/*
- 파일명 : file_client1.c
- 기  능 : echo_client1에서 Keyboard 대신 file 을 읽어서 전송
- 컴파일 : cc -o file_client1 file_client1.c
- 사용법 : file_client1 [host IP] [port]
-*/
 #ifdef _WIN32
 #include <winsock.h>
 #include <signal.h>
@@ -104,14 +98,28 @@ int main(int argc, char* argv[]) {
 		exit(0);
 	}
 
-	// send file name
-	if (send(s, filename, BUF_LEN, 0) <= 0) {	// transmission unit is BUF_LEN
+	int filesize;
+	int readsum = 0, nread;
+	fseek(fp, 0, 2);
+	filesize = ftell(fp);
+	rewind(fp);
+	printf("filesize = %d\n", filesize);
+
+	// send file name and file size
+	sprintf(buf, "%s %d", filename, filesize);
+	if (send(s, buf, BUF_LEN, 0) <= 0) {	// transmission unit is BUF_LEN
 		printf("filename send error\n");
 		exit(0);
 	}
 
 	// send file contents
-	while (1) {
+	readsum = 0;
+	if (filesize < BUF_LEN)
+		nread = filesize;
+	else
+		nread = BUF_LEN;
+
+	while (readsum < filesize) {
 		int n;
 		// n = fgets(buf, BUF_LEN, fp);
 		memset(buf, 0, BUF_LEN + 1);
@@ -125,6 +133,9 @@ int main(int argc, char* argv[]) {
 			printf("send error\n");
 			break;
 		}
+		readsum += n;
+		if ((nread = (filesize - readsum)) > BUF_LEN)	// read remaining data
+			nread = BUF_LEN;
 	}
 	fclose(fp);
 #ifdef WIN32

@@ -1,8 +1,8 @@
 /*
-파일명 : file_server2.c
-기  능 : file_server2 과 동일
-컴파일 : cc -o file_server file_server.c
-사용법 : file_server2 [port]
+파일명 : file_server3.c
+기  능 : file 을 수신해서 저장하는 서버 file_server2에서 filename 과 filesize를 먼저 전송 받는다.
+컴파일 : cc -o file_server3 file_server3.c
+사용법 : file_server3 [port]
 */
 
 #ifdef _WIN32
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
 	main_socket = server_fd;
 #endif
 
-	printf("file_server2 waiting connection..\n");
+	printf("file_server3 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
@@ -109,37 +109,46 @@ int main(int argc, char* argv[]) {
 
 		char filename[BUF_LEN];
 		FILE* fp;
-
-		if (recv(client_fd, filename, BUF_LEN, 0) <= 0) {
+		int filesize, readsum = 0, nread = 0, n;
+		if (recv(client_fd, buf, BUF_LEN, 0) <= 0) {
 			printf("filename recv error\n");
 			exit(0);
 		}
-
-		printf("Received filename : %s\n", filename);
-
+		sscanf(buf, "%s %d", filename, &filesize);
+		printf("Received filename : %s size = %d\n", filename, filesize);
 		if ((fp = fopen(filename, "wb")) == NULL) {
 			printf("file open error\n");
 			exit(0);
 		}
 
-		while (1) {
-			int i, len;
-			memset(buf, 0, BUF_LEN + 1);
-			msg_size = recv(client_fd, buf, BUF_LEN, 0);
-			if (msg_size <= 0) {
-				printf("recv error : end of file\n");
+		readsum = 0;
+		if (filesize < BUF_LEN)
+			nread = filesize;
+		else
+			nread = BUF_LEN;
+
+		memset(buf, 0, BUF_LEN + 1);
+
+		while (readsum < filesize) {
+			n = recv(client_fd, buf, nread, 0);
+			if (n <= 0) {
+				printf("\nend of file\n");
 				break;
 			}
 			/*for (int j = 0; j < strlen(buf); j++) {
 				printf("%d: %c\n", j, buf[j]);
 			}*/
-			printf("read data = %d bytes : %s\n", msg_size, buf);
+			printf("read data = %d bytes : %s\n", n, buf);
 
-			if (fwrite(buf, msg_size, 1, fp) <= 0) {
+			if (fwrite(buf, n, 1, fp) <= 0) {
 				printf("fwrite error\n");
 				break;
 			}
+			readsum += n;
+			if ((nread = (filesize - readsum)) > BUF_LEN)
+				nread = BUF_LEN;
 		}
+		printf("File %s %d receive completed.\n", filename, filesize);
 		fclose(fp);
 #ifdef WIN32
 		closesocket(client_fd);
