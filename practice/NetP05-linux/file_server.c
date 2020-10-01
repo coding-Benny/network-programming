@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
 	main_socket = server_fd;
 #endif
 
-	printf("file_server1 waiting connection..\n");
+	printf("file_server4 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
@@ -104,25 +104,65 @@ int main(int argc, char* argv[]) {
 		}
 
 		printf("Client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-		printf("client_fd = %d\n", client_fd);
+		printf("client_fd = %d\n\n", client_fd);
 
 		while (1) {
-			msg_size = recv(client_fd, buf, BUF_LEN, 0);
-			if (msg_size <= 0) {
-				printf("recv error\n");
+			printf("Waiting client command\n");
+			char filename[BUF_LEN];
+			char command[BUF_LEN];
+			char f_size[BUF_LEN];
+			int filesize, readsum = 0, nread = 0, n;
+			FILE* fp;
+
+			if (recv(client_fd, buf, BUF_LEN, 0) <= 0) {
+				printf("filename recv error\n");
+				exit(0);
+			}
+			printf("Received %d %s\n", BUF_LEN, buf);
+			sscanf(buf, "%s %s %s", command, filename, f_size);
+			filesize = atoi(f_size);
+			if (strcmp(command, "put") == 0) {
+				if ((fp = fopen(filename, "wb")) == NULL) {
+					printf("file open error\n");
+					exit(0);
+				}
+				printf("Receving %s %d bytes.\n", filename, filesize);
+
+				readsum = 0;
+				if (filesize < BUF_LEN)
+					nread = filesize;
+				else
+					nread = BUF_LEN;
+
+				memset(buf, 0, BUF_LEN + 1);
+
+				while (readsum < filesize) {
+					n = recv(client_fd, buf, nread, 0);
+					if (n <= 0) {
+						printf("\nend of file\n");
+						break;
+					}
+
+					if (fwrite(buf, n, 1, fp) <= 0) {
+						printf("fwrite error\n");
+						break;
+					}
+					readsum += n;
+					if ((nread = (filesize - readsum)) > BUF_LEN)
+						nread = BUF_LEN;
+				}
+				printf("\nFile %s %d bytes received.\n\n", filename, filesize);
+				fclose(fp);
+			}
+			else if (strcmp(command, "get") == 0) {
+				printf("get\n");
+			}
+			else if (strcmp(command, "dir") == 0) {
+				printf("dir\n");
+			}
+			else if (strcmp(command, "quit") == 0) {
 				break;
 			}
-			buf[msg_size] = '\0'; // 문자열 끝에 NULL를 추가하기 위함
-			printf("Received len=%d : %s", msg_size, buf);
-			// 만약 exit이면 종료
-			if (strcmp(buf, "exit\n") == 0)
-				break;
-			msg_size = send(client_fd, buf, msg_size, 0);
-			if (msg_size <= 0) {
-				printf("send error\n");
-				break;
-			}
-			printf("Sending len=%d : %s", msg_size, buf);
 		}
 #ifdef WIN32
 		closesocket(client_fd);
