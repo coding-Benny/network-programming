@@ -1,8 +1,8 @@
 /*
-파일명 : file_server3.c
-기  능 : file 을 수신해서 저장하는 서버 file_server2에서 filename 과 filesize를 먼저 전송 받는다.
-컴파일 : cc -o file_server3 file_server3.c
-사용법 : file_server3 [port]
+파일명 : file_server4.c
+기  능 : 
+컴파일 : cc -o file_server34 file_server4.c
+사용법 : file_server4 [port]
 */
 
 #ifdef _WIN32
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
 	main_socket = server_fd;
 #endif
 
-	printf("file_server3 waiting connection..\n");
+	printf("file_server4 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
 	listen(server_fd, 5);
 
 	/* iterative  file 서비스 수행 */
-	printf("Server : waiting connection request.\n");
+	printf("Server : waiting new connection request.\n");
 	len = sizeof(client_addr);
 
 	while (1) {
@@ -105,51 +105,67 @@ int main(int argc, char* argv[]) {
 		}
 
 		printf("Client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-		printf("client_fd = %d\n", client_fd);
+		printf("client_fd = %d\n\n", client_fd);
 
-		char filename[BUF_LEN];
-		FILE* fp;
-		int filesize, readsum = 0, nread = 0, n;
-		if (recv(client_fd, buf, BUF_LEN, 0) <= 0) {
-			printf("filename recv error\n");
-			exit(0);
-		}
-		sscanf(buf, "%s %d", filename, &filesize);
-		printf("Received filename : %s size = %d\n", filename, filesize);
-		if ((fp = fopen(filename, "wb")) == NULL) {
-			printf("file open error\n");
-			exit(0);
-		}
+		while (1) {
+			printf("Waiting client command\n");
+			char filename[BUF_LEN];
+			char command[BUF_LEN];
+			char f_size[BUF_LEN];
+			int filesize, readsum = 0, nread = 0, n;
+			FILE* fp;
 
-		readsum = 0;
-		if (filesize < BUF_LEN)
-			nread = filesize;
-		else
-			nread = BUF_LEN;
+			if (recv(client_fd, buf, BUF_LEN, 0) <= 0) {
+				printf("filename recv error\n");
+				exit(0);
+			}
+			printf("Received %d %s\n", BUF_LEN, buf);
+			sscanf(buf, "%s %s %s", command, filename, f_size);
+			filesize = atoi(f_size);
+			if (strcmp(command, "put") == 0) {
+				if ((fp = fopen(filename, "wb")) == NULL) {
+					printf("file open error\n");
+					exit(0);
+				}
+				printf("Receving %s %d bytes.\n", filename, filesize);
 
-		memset(buf, 0, BUF_LEN + 1);
+				readsum = 0;
+				if (filesize < BUF_LEN)
+					nread = filesize;
+				else
+					nread = BUF_LEN;
 
-		while (readsum < filesize) {
-			n = recv(client_fd, buf, nread, 0);
-			if (n <= 0) {
-				printf("\nend of file\n");
+				memset(buf, 0, BUF_LEN + 1);
+
+				while (readsum < filesize) {
+					n = recv(client_fd, buf, nread, 0);
+					if (n <= 0) {
+						printf("\nend of file\n");
+						break;
+					}
+
+					if (fwrite(buf, n, 1, fp) <= 0) {
+						printf("fwrite error\n");
+						break;
+					}
+					readsum += n;
+					if ((nread = (filesize - readsum)) > BUF_LEN)
+						nread = BUF_LEN;
+				}
+				printf("\nFile %s %d bytes received.\n\n", filename, filesize);
+				fclose(fp);
+			}
+			else if (strcmp(command, "get") == 0) {
+				printf("get\n");
+			}
+			else if (strcmp(command, "dir") == 0) {
+				printf("dir\n");
+			}
+			else if (strcmp(command, "quit") == 0) {
 				break;
 			}
-			/*for (int j = 0; j < strlen(buf); j++) {
-				printf("%d: %c\n", j, buf[j]);
-			}*/
-			printf("read data = %d bytes : %s\n", n, buf);
-
-			if (fwrite(buf, n, 1, fp) <= 0) {
-				printf("fwrite error\n");
-				break;
-			}
-			readsum += n;
-			if ((nread = (filesize - readsum)) > BUF_LEN)
-				nread = BUF_LEN;
 		}
-		printf("File %s %d receive completed.\n", filename, filesize);
-		fclose(fp);
+		
 #ifdef WIN32
 		closesocket(client_fd);
 #else

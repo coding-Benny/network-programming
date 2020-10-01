@@ -1,8 +1,8 @@
 /*
- 파일명 : file_client3.c
- 기  능 : file_clien2에서 filename + filesize 전송
- 컴파일 : cc -o file_client3 file_client3.c
- 사용법 : file_client3 [host IP] [port]
+ 파일명 : file_client4.c
+ 기  능 : ftp 와 비슷하게 만들기. get, put, dir, quit 구현
+ 컴파일 : cc -o file_client4 file_client4.c
+ 사용법 : file_client4 [host IP] [port]
 */
 
 #ifdef _WIN32
@@ -80,62 +80,87 @@ int main(int argc, char* argv[]) {
 	// 파일명 입력
 	FILE* fp;
 	char filename[BUF_LEN] = "data.txt"; // data file 예
-	printf("Enter file name : ");
-	scanf("%s", filename);
-	getchar(); // Enter key 처리.
-
-	if ((fp = fopen(filename, "rb")) == NULL) {
-		printf("Can't open file %s\n", filename);
-		exit(0);
-	}
+	char command[BUF_LEN] = { 0 };
+	char req[BUF_LEN] = { 0 };
 
 	/* 연결요청 */
 	printf("Connecting %s %s\n", ip_addr, port_no);
 
-	if (connect(s, (struct sockaddr*)&server_addr,
-		sizeof(server_addr)) < 0) {
+	if (connect(s, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
 		printf("can't connect.\n");
 		exit(0);
 	}
 
-	int filesize;
-	int readsum = 0, nread;
-	fseek(fp, 0, 2);
-	filesize = ftell(fp);
-	rewind(fp);
-	printf("filesize = %d\n", filesize);
+	while (1) {
+		int c, filesize;
+		int readsum = 0, nread;
 
-	// send file name and file size
-	sprintf(buf, "%s %d", filename, filesize);
-	if (send(s, buf, BUF_LEN, 0) <= 0) {	// transmission unit is BUF_LEN
-		printf("filename send error\n");
-		exit(0);
-	}
+		printf("file_client4> ");
+		scanf("%s", req);
+		while ((c = getchar()) != EOF && c != '\n');
 
-	// send file contents
-	readsum = 0;
-	if (filesize < BUF_LEN)
-		nread = filesize;
-	else
-		nread = BUF_LEN;
+		sscanf(req, "%s %s", command, filename);
 
-	while (readsum < filesize) {
-		int n;
-		// n = fgets(buf, BUF_LEN, fp);
-		memset(buf, 0, BUF_LEN + 1);
-		n = fread(buf, 1, BUF_LEN, fp);	// read file
+		if (strcmp(command, "put") == 0) {
+			if ((fp = fopen(filename, "rb")) == NULL) {
+				printf("Can't open file %s\n", filename);
+				exit(0);
+			}
 
-		if (n <= 0)	//  End of file ??
-			break;
-		printf("Sending %d bytes : %s\n", n, buf);
+			fseek(fp, 0, 2);
+			filesize = ftell(fp);
+			rewind(fp);
 
-		if (send(s, buf, n, 0) <= 0) {	// only read bytes are sent to the network
-			printf("send error\n");
-			break;
+			printf("Sending %s %d bytes.\n", filename, filesize);
+
+			// send command, filename and filesize
+			sprintf(buf, "%s %s %d", command, filename, filesize);
+			if (send(s, buf, BUF_LEN, 0) <= 0) {	// transmission unit is BUF_LEN
+				printf("command send error\n");
+				exit(0);
+			}
+
+			// send file contents
+			readsum = 0;
+			if (filesize < BUF_LEN)
+				nread = filesize;
+			else
+				nread = BUF_LEN;
+
+			while (readsum < filesize) {
+				int n;
+				// n = fgets(buf, BUF_LEN, fp);
+				memset(buf, 0, BUF_LEN + 1);
+				n = fread(buf, 1, BUF_LEN, fp);	// read file
+
+				if (n <= 0)	//  End of file ??
+					break;
+
+				if (send(s, buf, n, 0) <= 0) {	// only read bytes are sent to the network
+					printf("send error\n");
+					break;
+				}
+				readsum += n;
+				if ((nread = (filesize - readsum)) > BUF_LEN)	// read remaining data
+					nread = BUF_LEN;
+			}
+			printf("File %s %d bytes transferred.\n\n", filename, filesize);
 		}
-		readsum += n;
-		if ((nread = (filesize - readsum)) > BUF_LEN)	// read remaining data
-			nread = BUF_LEN;
+		else if (strcmp(command, "get") == 0) {
+			// 1. 서버에게 파일명을 보낸다.
+			// 2. 서버가 파일 사이즈를 알려주면
+			// 3. put 명령어 처리와 동일하게 진행하되,
+			//	  client(recv/fwrite) <- server(fread/send)
+			// - fopen("wb"), recv(), fwrite() 사용
+		}
+		else if (strcmp(command, "dir") == 0) {
+			// 명령어를 실행한 결과를 파일처럼 읽어서 보내준다.
+		}
+		else if (strcmp(command, "quit") == 0) {
+			if (send(s, command, BUF_LEN, 0) < 0)
+				printf("send error\n");
+			exit(0);
+		}			
 	}
 	fclose(fp);
 #ifdef WIN32
