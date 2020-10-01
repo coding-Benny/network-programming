@@ -1,8 +1,8 @@
 /*
- ÆÄÀÏ¸í : file_client4.c
- ±â  ´É : ftp ¿Í ºñ½ÁÇÏ°Ô ¸¸µé±â. get, put, dir, quit ±¸Çö
- ÄÄÆÄÀÏ : cc -o file_client4 file_client4.c
- »ç¿ë¹ý : file_client4 [host IP] [port]
+ ¿¿¿ : file_client4.c
+ ¿  ¿ : ftp ¿ ¿¿¿¿ ¿¿¿. get, put, dir, quit ¿¿
+ ¿¿¿ : cc -o file_client4 file_client4.c
+ ¿¿¿ : file_client4 [host IP] [port]
 */
 
 #ifdef _WIN32
@@ -35,7 +35,7 @@ void init_winsock()
 	WORD sversion;
 	u_long iMode = 1;
 
-	// winsock »ç¿ëÀ» À§ÇØ ÇÊ¼öÀûÀÓ
+	// winsock ¿¿¿ ¿¿ ¿¿¿¿
 	signal(SIGINT, exit_callback);
 	sversion = MAKEWORD(1, 1);
 	WSAStartup(sversion, &wsadata);
@@ -71,19 +71,20 @@ int main(int argc, char* argv[]) {
 	main_socket = s;
 #endif 
 
-	/* echo ¼­¹öÀÇ ¼ÒÄÏÁÖ¼Ò ±¸Á¶Ã¼ ÀÛ¼º */
+	/* echo ¿¿¿ ¿¿¿¿ ¿¿¿ ¿¿ */
 	memset((char*)&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = inet_addr(ip_addr);
 	server_addr.sin_port = htons(atoi(port_no));
 
-	// ÆÄÀÏ¸í ÀÔ·Â
+	// ¿¿¿ ¿¿
 	FILE* fp;
-	char filename[BUF_LEN] = "data.txt"; // data file ¿¹
+	char filename[BUF_LEN] = { 0 }; // data file ¿
 	char command[BUF_LEN] = { 0 };
+	char local_command[BUF_LEN] = { 0 };
 	char req[BUF_LEN] = { 0 };
 
-	/* ¿¬°á¿äÃ» */
+	/* ¿¿¿¿ */
 	printf("Connecting %s %s\n", ip_addr, port_no);
 
 	if (connect(s, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
@@ -92,14 +93,14 @@ int main(int argc, char* argv[]) {
 	}
 
 	while (1) {
-		int c, filesize;
+		int c, filesize = 0;
 		int readsum = 0, nread;
 
 		printf("file_client4> ");
-		scanf("%s", req);
-		while ((c = getchar()) != EOF && c != '\n');
-
+		fgets(req, BUF_LEN, stdin);
 		sscanf(req, "%s %s", command, filename);
+
+		memset(buf, 0, BUF_LEN + 1);
 
 		if (strcmp(command, "put") == 0) {
 			if ((fp = fopen(filename, "rb")) == NULL) {
@@ -147,14 +148,54 @@ int main(int argc, char* argv[]) {
 			printf("File %s %d bytes transferred.\n\n", filename, filesize);
 		}
 		else if (strcmp(command, "get") == 0) {
-			// 1. ¼­¹ö¿¡°Ô ÆÄÀÏ¸íÀ» º¸³½´Ù.
-			// 2. ¼­¹ö°¡ ÆÄÀÏ »çÀÌÁî¸¦ ¾Ë·ÁÁÖ¸é
-			// 3. put ¸í·É¾î Ã³¸®¿Í µ¿ÀÏÇÏ°Ô ÁøÇàÇÏµÇ,
-			//	  client(recv/fwrite) <- server(fread/send)
-			// - fopen("wb"), recv(), fwrite() »ç¿ë
-		}
+			// send command, filename
+			sprintf(buf, "%s %s", command, filename);
+			if (send(s, buf, BUF_LEN, 0) <= 0) {	// transmission unit is BUF_LEN
+				printf("command send error\n");
+				exit(0);
+			}
+			memset(buf, 0, BUF_LEN + 1);
+			// 2. ¿¿¿ ¿¿ ¿¿¿¿ ¿¿¿¿
+			if (recv(s, buf, BUF_LEN, 0) <= 0) {
+				printf("filename recv error\n");
+				exit(0);
+			}
+			sscanf(buf, "%s %d", filename, &filesize);
+
+			if ((fp = fopen(filename, "wb")) == NULL) {
+				printf("file open error\n");
+				exit(0);
+			}
+			printf("Receving %s %d bytes.\n", filename, filesize);
+
+			readsum = 0;
+			if (filesize < BUF_LEN)
+				nread = filesize;
+			else
+				nread = BUF_LEN;
+
+			memset(buf, 0, BUF_LEN + 1);
+
+			while (readsum < filesize) {
+				n = recv(s, buf, nread, 0);
+				if (n <= 0) {
+					printf("\nend of file\n");
+					break;
+				}
+
+				if (fwrite(buf, n, 1, fp) <= 0) {
+					printf("fwrite error\n");
+					break;
+				}
+				readsum += n;
+				if ((nread = (filesize - readsum)) > BUF_LEN)
+					nread = BUF_LEN;
+			}
+			printf("\nFile %s %d bytes received.\n\n", filename, filesize);
+			fclose(fp);
+		}	
 		else if (strcmp(command, "dir") == 0) {
-			// ¸í·É¾î¸¦ ½ÇÇàÇÑ °á°ú¸¦ ÆÄÀÏÃ³·³ ÀÐ¾î¼­ º¸³»ÁØ´Ù.
+			// ¿¿¿¿ ¿¿¿ ¿¿¿ ¿¿¿¿ ¿¿¿ ¿¿¿¿.
 		}
 		else if (strcmp(command, "quit") == 0) {
 			if (send(s, command, BUF_LEN, 0) < 0)
