@@ -1,8 +1,8 @@
 /*
-ÆÄÀÏ¸í : file_server4.c
-±â  ´É : 
-ÄÄÆÄÀÏ : cc -o file_server34 file_server4.c
-»ç¿ë¹ı : file_server4 [port]
+íŒŒì¼ëª… : file_server4.c
+ê¸°  ëŠ¥ : FTP ëª…ë ¹ì–´ êµ¬í˜„ put, get, dir, ldir, !cmd
+ì»´íŒŒì¼ : cc -o file_server4 file_server4.c
+ì‚¬ìš©ë²• : file_server4 [port]
 */
 
 #ifdef _WIN32
@@ -35,7 +35,7 @@ void init_winsock()
 	WORD sversion;
 	u_long iMode = 1;
 
-	// winsock »ç¿ëÀ» À§ÇØ ÇÊ¼öÀûÀÓ
+	// winsock ì‚¬ìš©ì„ ìœ„í•´ í•„ìˆ˜ì ì„
 	signal(SIGINT, exit_callback);
 	sversion = MAKEWORD(1, 1);
 	WSAStartup(sversion, &wsadata);
@@ -48,7 +48,7 @@ void init_winsock()
 
 int main(int argc, char* argv[]) {
 	struct sockaddr_in server_addr, client_addr;
-	int server_fd, client_fd;			/* ¼ÒÄÏ¹øÈ£ */
+	int server_fd, client_fd;			/* ì†Œì¼“ë²ˆí˜¸ */
 	int len, msg_size;
 	char buf[BUF_LEN + 1];
 	unsigned int set = 1;
@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
 #else
 	printf("Linux : ");
 #endif
-	/* ¼ÒÄÏ »ı¼º */
+	/* ì†Œì¼“ ìƒì„± */
 	if ((server_fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		printf("Server: Can't open stream socket.");
 		exit(0);
@@ -76,28 +76,28 @@ int main(int argc, char* argv[]) {
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
-	/* server_addrÀ» '\0'À¸·Î ÃÊ±âÈ­ */
+	/* server_addrì„ '\0'ìœ¼ë¡œ ì´ˆê¸°í™” */
 	memset((char*)&server_addr, 0, sizeof(server_addr));
-	/* server_addr ¼¼ÆÃ */
+	/* server_addr ì„¸íŒ… */
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	server_addr.sin_port = htons(atoi(port_no));
 
-	/* bind() È£Ãâ */
+	/* bind() í˜¸ì¶œ */
 	if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
 		printf("Server: Can't bind local address.\n");
 		exit(0);
 	}
 
-	/* ¼ÒÄÏÀ» ¼öµ¿ ´ë±â¸ğµå·Î ¼¼ÆÃ */
+	/* ì†Œì¼“ì„ ìˆ˜ë™ ëŒ€ê¸°ëª¨ë“œë¡œ ì„¸íŒ… */
 	listen(server_fd, 5);
 
-	/* iterative  file ¼­ºñ½º ¼öÇà */
+	/* iterative  file ì„œë¹„ìŠ¤ ìˆ˜í–‰ */
 	printf("Server : waiting new connection request.\n");
 	len = sizeof(client_addr);
 
 	while (1) {
-		/* ¿¬°á¿äÃ»À» ±â´Ù¸² */
+		/* ì—°ê²°ìš”ì²­ì„ ê¸°ë‹¤ë¦¼ */
 		client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &len);
 		if (client_fd < 0) {
 			printf("Server: accept failed.\n");
@@ -105,23 +105,23 @@ int main(int argc, char* argv[]) {
 		}
 
 		printf("Client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-		printf("client_fd = %d\n\n", client_fd);
+		printf("client_fd = %d\n", client_fd);
 
 		while (1) {
-			printf("Waiting client command\n");
-			char filename[BUF_LEN];
-			char command[BUF_LEN];
-			char f_size[BUF_LEN];
+			char filename[BUF_LEN] = { 0 };
+			char command[BUF_LEN] = { 0 };
 			int filesize, readsum = 0, nread = 0, n;
 			FILE* fp;
 
+			printf("\nWaiting client command\n");
+
 			if (recv(client_fd, buf, BUF_LEN, 0) <= 0) {
-				printf("filename recv error\n");
+				printf("recv error\n");
 				exit(0);
 			}
 			printf("Received %d %s\n", BUF_LEN, buf);
-			sscanf(buf, "%s %s %s", command, filename, f_size);
-			filesize = atoi(f_size);
+			sscanf(buf, "%s %s %d", command, filename, &filesize);
+
 			if (strcmp(command, "put") == 0) {
 				if ((fp = fopen(filename, "wb")) == NULL) {
 					printf("file open error\n");
@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
 					if (n <= 0) {
 						printf("\nend of file\n");
 						break;
-					}
+					}	
 
 					if (fwrite(buf, n, 1, fp) <= 0) {
 						printf("fwrite error\n");
@@ -152,11 +152,54 @@ int main(int argc, char* argv[]) {
 					if ((nread = (filesize - readsum)) > BUF_LEN)
 						nread = BUF_LEN;
 				}
-				printf("\nFile %s %d bytes received.\n\n", filename, filesize);
+				printf("\nFile %s %d bytes received.\n", filename, filesize);
 				fclose(fp);
 			}
 			else if (strcmp(command, "get") == 0) {
-				printf("get\n");
+				if ((fp = fopen(filename, "rb")) == NULL) {
+					printf("Can't open file %s\n", filename);
+					exit(0);
+				}
+
+				fseek(fp, 0, 2);
+				filesize = ftell(fp);
+				rewind(fp);
+
+				printf("\nSending %s %d bytes.\n", filename, filesize);
+
+				// send filename and filesize
+				sprintf(buf, "%s %d", filename, filesize);
+				if (send(client_fd, buf, BUF_LEN, 0) <= 0) {	// transmission unit is BUF_LEN
+					printf("command send error\n");
+					exit(0);
+				}
+
+				// send file contents
+				readsum = 0;
+				if (filesize < BUF_LEN)
+					nread = filesize;
+				else
+					nread = BUF_LEN;
+
+				while (readsum < filesize) {
+					int n;
+					// n = fgets(buf, BUF_LEN, fp);
+					memset(buf, 0, BUF_LEN + 1);
+					n = fread(buf, 1, BUF_LEN, fp);	// read file
+
+					if (n <= 0)	//  End of file ??
+						break;
+
+					if (send(client_fd, buf, n, 0) <= 0) {	// only read bytes are sent to the network
+						printf("send error\n");
+						break;
+					}
+					readsum += n;
+					if ((nread = (filesize - readsum)) > BUF_LEN)	// read remaining data
+						nread = BUF_LEN;
+				}
+				fclose(fp);
+				printf("File %s %d bytes sent.\n", filename, filesize);
 			}
 			else if (strcmp(command, "dir") == 0) {
 				printf("dir\n");
