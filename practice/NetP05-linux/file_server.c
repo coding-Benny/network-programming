@@ -1,10 +1,11 @@
 /*
-파일명 : file_server1.c
-기  능 : file_server1 과 동일
-컴파일 : cc -o file_server file_server.c
-사용법 : file_server1 [port]
+파일명 : file_server4.c
+기  능 : FTP 명령어 구현 put, get, dir, ldir, !cmd
+컴파일 : cc -o file_server4 file_server4.c
+사용법 : file_server4 [port]
 */
-#ifdef WIN32
+
+#ifdef _WIN32
 #include <winsock.h>
 #include <signal.h>
 #include <stdio.h>
@@ -51,7 +52,7 @@ int main(int argc, char* argv[]) {
 	int len, msg_size;
 	char buf[BUF_LEN + 1];
 	unsigned int set = 1;
-	char* ip_addr = file_SERVER, * port_no = file_PORT;
+	char* ip_addr = file_SERVER, *port_no = file_PORT;
 
 	if (argc == 2) {
 		port_no = argv[1];
@@ -92,7 +93,7 @@ int main(int argc, char* argv[]) {
 	listen(server_fd, 5);
 
 	/* iterative  file 서비스 수행 */
-	printf("Server : waiting connection request.\n");
+	printf("Server : waiting new connection request.\n");
 	len = sizeof(client_addr);
 
 	while (1) {
@@ -104,23 +105,23 @@ int main(int argc, char* argv[]) {
 		}
 
 		printf("Client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-		printf("client_fd = %d\n\n", client_fd);
+		printf("client_fd = %d\n", client_fd);
 
 		while (1) {
-			printf("Waiting client command\n");
-			char filename[BUF_LEN];
-			char command[BUF_LEN];
-			char f_size[BUF_LEN];
+			char filename[BUF_LEN] = { 0 };
+			char command[BUF_LEN] = { 0 };
 			int filesize, readsum = 0, nread = 0, n;
 			FILE* fp;
 
+			printf("\nWaiting client command\n");
+
 			if (recv(client_fd, buf, BUF_LEN, 0) <= 0) {
-				printf("filename recv error\n");
+				printf("recv error\n");
 				exit(0);
 			}
 			printf("Received %d %s\n", BUF_LEN, buf);
-			sscanf(buf, "%s %s %s", command, filename, f_size);
-			filesize = atoi(f_size);
+			sscanf(buf, "%s %s %d", command, filename, &filesize);
+
 			if (strcmp(command, "put") == 0) {
 				if ((fp = fopen(filename, "wb")) == NULL) {
 					printf("file open error\n");
@@ -141,7 +142,7 @@ int main(int argc, char* argv[]) {
 					if (n <= 0) {
 						printf("\nend of file\n");
 						break;
-					}
+					}	
 
 					if (fwrite(buf, n, 1, fp) <= 0) {
 						printf("fwrite error\n");
@@ -151,11 +152,54 @@ int main(int argc, char* argv[]) {
 					if ((nread = (filesize - readsum)) > BUF_LEN)
 						nread = BUF_LEN;
 				}
-				printf("\nFile %s %d bytes received.\n\n", filename, filesize);
+				printf("\nFile %s %d bytes received.\n", filename, filesize);
 				fclose(fp);
 			}
 			else if (strcmp(command, "get") == 0) {
-				printf("get\n");
+				if ((fp = fopen(filename, "rb")) == NULL) {
+					printf("Can't open file %s\n", filename);
+					exit(0);
+				}
+
+				fseek(fp, 0, 2);
+				filesize = ftell(fp);
+				rewind(fp);
+
+				printf("\nSending %s %d bytes.\n", filename, filesize);
+
+				// send filename and filesize
+				sprintf(buf, "%s %d", filename, filesize);
+				if (send(client_fd, buf, BUF_LEN, 0) <= 0) {	// transmission unit is BUF_LEN
+					printf("command send error\n");
+					exit(0);
+				}
+
+				// send file contents
+				readsum = 0;
+				if (filesize < BUF_LEN)
+					nread = filesize;
+				else
+					nread = BUF_LEN;
+
+				while (readsum < filesize) {
+					int n;
+					// n = fgets(buf, BUF_LEN, fp);
+					memset(buf, 0, BUF_LEN + 1);
+					n = fread(buf, 1, BUF_LEN, fp);	// read file
+
+					if (n <= 0)	//  End of file ??
+						break;
+
+					if (send(client_fd, buf, n, 0) <= 0) {	// only read bytes are sent to the network
+						printf("send error\n");
+						break;
+					}
+					readsum += n;
+					if ((nread = (filesize - readsum)) > BUF_LEN)	// read remaining data
+						nread = BUF_LEN;
+				}
+				fclose(fp);
+				printf("File %s %d bytes sent.\n", filename, filesize);
 			}
 			else if (strcmp(command, "dir") == 0) {
 				printf("dir\n");
