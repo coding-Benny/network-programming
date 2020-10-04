@@ -1,8 +1,8 @@
 /*
- ¿¿¿ : file_client4.c
- ¿  ¿ : ftp ¿ ¿¿¿¿ ¿¿¿. get, put, dir, quit ¿¿
- ¿¿¿ : cc -o file_client4 file_client4.c
- ¿¿¿ : file_client4 [host IP] [port]
+ íŒŒì¼ëª… : file_client4.c
+ ê¸°  ëŠ¥ : ftp ì™€ ë¹„ìŠ·í•˜ê²Œ ë§Œë“¤ê¸°. get, put, dir, quit êµ¬í˜„
+ ì»´íŒŒì¼ : cc -o file_client4 file_client4.c
+ ì‚¬ìš©ë²• : file_client4 [host IP] [port]
 */
 
 #ifdef _WIN32
@@ -35,7 +35,7 @@ void init_winsock()
 	WORD sversion;
 	u_long iMode = 1;
 
-	// winsock ¿¿¿ ¿¿ ¿¿¿¿
+	// winsock ì‚¬ìš©ì„ ìœ„í•´ í•„ìˆ˜ì ì„
 	signal(SIGINT, exit_callback);
 	sversion = MAKEWORD(1, 1);
 	WSAStartup(sversion, &wsadata);
@@ -71,20 +71,20 @@ int main(int argc, char* argv[]) {
 	main_socket = s;
 #endif 
 
-	/* echo ¿¿¿ ¿¿¿¿ ¿¿¿ ¿¿ */
+	/* echo ì„œë²„ì˜ ì†Œì¼“ì£¼ì†Œ êµ¬ì¡°ì²´ ì‘ì„± */
 	memset((char*)&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = inet_addr(ip_addr);
 	server_addr.sin_port = htons(atoi(port_no));
 
-	// ¿¿¿ ¿¿
+	// íŒŒì¼ëª… ì…ë ¥
 	FILE* fp;
-	char filename[BUF_LEN] = { 0 }; // data file ¿
+	char filename[BUF_LEN] = { 0 }; // data file ì˜ˆ
 	char command[BUF_LEN] = { 0 };
 	char local_command[BUF_LEN] = { 0 };
 	char req[BUF_LEN] = { 0 };
 
-	/* ¿¿¿¿ */
+	/* ì—°ê²°ìš”ì²­ */
 	printf("Connecting %s %s\n", ip_addr, port_no);
 
 	if (connect(s, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
 				exit(0);
 			}
 			memset(buf, 0, BUF_LEN + 1);
-			// 2. ¿¿¿ ¿¿ ¿¿¿¿ ¿¿¿¿
+			// 2. ì„œë²„ê°€ íŒŒì¼ ì‚¬ì´ì¦ˆë¥¼ ì•Œë ¤ì£¼ë©´
 			if (recv(s, buf, BUF_LEN, 0) <= 0) {
 				printf("filename recv error\n");
 				exit(0);
@@ -193,17 +193,65 @@ int main(int argc, char* argv[]) {
 			}
 			printf("\nFile %s %d bytes received.\n\n", filename, filesize);
 			fclose(fp);
-		}	
+		}
 		else if (strcmp(command, "dir") == 0) {
-			// ¿¿¿¿ ¿¿¿ ¿¿¿ ¿¿¿¿ ¿¿¿ ¿¿¿¿.
+			// send command
+			sprintf(buf, "%s", command);
+			if (send(s, buf, BUF_LEN, 0) <= 0) {	// transmission unit is BUF_LEN
+				printf("command send error\n");
+				exit(0);
+			}
+			// ëª…ë ¹ì–´ë¥¼ ì‹¤í–‰í•œ ê²°ê³¼ë¥¼ íŒŒì¼ì²˜ëŸ¼ ì½ì–´ì„œ ë³´ë‚´ì¤€ë‹¤.			
+			while (1) {
+				memset(buf, 0, 128);
+				//fread(buf, 1, BUF_LEN, fp);
+				recv(s, buf, 128, 0);
+
+				if (strncmp(buf, "-EOF-", 5) == 0)
+					break;
+				
+				printf(buf);
+			}
+			printf("\n");
+		}
+		else if (strcmp(command, "ldir") == 0) {
+			// send command
+			sprintf(buf, "%s", command);
+			if (send(s, buf, BUF_LEN, 0) <= 0) {	// transmission unit is BUF_LEN
+				printf("command send error\n");
+				exit(0);
+			}
+#ifdef WIN32
+			system("dir");
+#else
+			system("ls -l");
+#endif
+			printf("\n");
+		}
+		else if (command[0] == '!') {
+			strcpy(local_command, command);
+
+			// send command
+			strcpy(buf, local_command);
+			
+			if (send(s, buf, BUF_LEN, 0) <= 0) {	// transmission unit is BUF_LEN
+				printf("command send error\n");
+				exit(0);
+			}
+			
+			system(local_command + 1);
+			printf("\n");
 		}
 		else if (strcmp(command, "quit") == 0) {
+			printf("Client end.\n");
 			if (send(s, command, BUF_LEN, 0) < 0)
 				printf("send error\n");
 			exit(0);
-		}			
+		}
+		else {
+			printf("Please enter the correct command..\n");
+		}
 	}
-	fclose(fp);
 #ifdef WIN32
 	closesocket(s);
 #else
