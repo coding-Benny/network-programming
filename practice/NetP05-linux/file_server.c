@@ -202,12 +202,43 @@ int main(int argc, char* argv[]) {
 				printf("File %s %d bytes sent.\n", filename, filesize);
 			}
 			else if (strcmp(command, "dir") == 0) {
-				printf("dir\n");
+#ifdef _WIN32
+				fp = _popen(command, "rb");
+#else // Linux 는 dir 대신 ls -l 사용
+				strcpy(command, "ls -l");
+				fp = popen(command, "r");
+#endif
+				printf("\nSending directory listing.\n");
+				while (1) {
+					memset(buf, 0, 128);
+					n = fread(buf, 1, 128, fp);
+
+					if (n <= 0)
+						break;
+
+					send(client_fd, buf, 128, 0);
+				}
+
+				strcpy(buf, "-EOF-");
+				send(client_fd, buf, 128, 0);
+#ifdef _WIN32
+				_pclose(fp);
+#else
+				pclose(fp);
+#endif
 			}
 			else if (strcmp(command, "quit") == 0) {
+				printf("Client closed.\n");
+				printf("\nWaiting new connection request...\n");
+#ifdef WIN32
+				closesocket(client_fd);
+#else
+				close(client_fd);
+#endif
 				break;
 			}
 		}
+
 #ifdef WIN32
 		closesocket(client_fd);
 #else
@@ -222,5 +253,3 @@ int main(int argc, char* argv[]) {
 #endif	
 	return(0);
 }
-
-
