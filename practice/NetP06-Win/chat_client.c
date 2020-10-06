@@ -1,7 +1,7 @@
 /*
-파일명 : chat_client1.c
-기  능 : 채팅 클라이언트 echo_client1 와 거의 동일, 네트워크와 키보드 동시 처리가 핵심
-사용법 : chat_client1 [host] [port]
+파일명 : chat_client2.c
+기  능 : 채팅 클라이언트, username 처리
+사용법 : chat_client2 [host] [port]
 네트워크와 키보드 동시 처리 방법
 Linux : select() 사용
 Windows : socket()을 Non-blocking mode 와 kbhit()을 이용하여 폴링 구조 사용
@@ -51,6 +51,8 @@ void init_winsock()
 
 #define EXIT	"exit"
 
+char username[BUF_LEN];	// user name
+
 int main(int argc, char* argv[]) {
 	char buf1[BUF_LEN + 1], buf2[BUF_LEN + 1];
 	int s, n, len_in, len_out;
@@ -64,6 +66,10 @@ int main(int argc, char* argv[]) {
 		ip_addr = argv[1];
 		port_no = argv[2];
 	}
+
+	printf("chat_client2 running.\n");
+	printf("Enter user name : ");
+	scanf("%s", username);	getchar();	// \n 제거
 
 #ifdef WIN32
 	printf("Windows : ");
@@ -87,7 +93,7 @@ int main(int argc, char* argv[]) {
 	server_addr.sin_port = htons(atoi(port_no));
 
 	/* 연결요청 */
-	printf("chat_client1 connecting %s %s\n", ip_addr, port_no);
+	printf("chat_client2 connecting %s %s\n", ip_addr, port_no);
 
 	/* 연결요청 */
 	if (connect(s, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
@@ -116,7 +122,8 @@ int main(int argc, char* argv[]) {
 		if (kbhit()) { // key 가 눌려있으면 read key --> write to chat server
 			memset(buf1, 0, BUF_LEN);
 			if (fgets(buf1, BUF_LEN, stdin)) { // Enter key 까지 입력 받고 전송
-				if (send(s, buf1, BUF_LEN, 0) < 0) {
+				sprintf(buf2, "[%s] %s", username, buf1);
+				if (send(s, buf2, BUF_LEN, 0) < 0) {
 					printf("send error.\n");
 					break;
 				}
@@ -172,7 +179,7 @@ int main(int argc, char* argv[]) {
 				printf("fgets error\n");
 				break;
 			}
-			
+
 		}
 	}
 #endif

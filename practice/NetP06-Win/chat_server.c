@@ -1,6 +1,6 @@
-/*
- 파일명 : chat_server1.c
- 기  능 : 채팅서버, select 함수 이용, (Windows 와 Linux 동일)
+/*----------------------
+ 파일명 : chat_server2.c
+ 기  능 : 채팅서버 username 과 exit 처리, select 함수 이용, (Windows 와 Linux 동일)
  사용법 : chat_server [port]
 */
 #ifdef _WIN32
@@ -54,6 +54,8 @@ void RemoveClient(int);		// 채팅 탈퇴 처리 함수
 #define CHAT_PORT "30000"
 #define USE_NICKNAME
 
+char username[BUF_LEN];
+
 int main(int argc, char* argv[]) {
 	char buf[BUF_LEN];
 	int i, j, n, ret;
@@ -79,7 +81,7 @@ int main(int argc, char* argv[]) {
 	main_socket = server_fd;
 #endif
 
-	printf("chat_server1 waiting connection..\n");
+	printf("chat_server2 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
@@ -138,8 +140,11 @@ int main(int argc, char* argv[]) {
 					continue;
 				}
 				printf("received %d from client[%d] : %s", n, i, buf);
+				sscanf(buf, "%s", username);
+				printf("\nnickname=%s\n", username);
+
 				// 종료문자 처리
-				if (strncmp(buf, EXIT, strlen(EXIT)) == 0) {
+				if (strncmp(buf + strlen(username) + 1, EXIT, strlen(EXIT)) == 0) {
 					RemoveClient(i);
 					continue;
 				}
