@@ -1,8 +1,9 @@
 /*----------------------
- 파일명 : chat_server2.c
- 기  능 : 채팅서버 username 과 exit 처리, select 함수 이용, (Windows 와 Linux 동일)
- 사용법 : chat_server [port]
-*/
+ 파일명 : chat_server3.c
+ 기  능 : 채팅서버, username 사용, /login, /list, /exit 처리.
+ 컴파일 : cc -o chat_server3 chat_server3.c
+ 사용법 : chat_server3 [port]
+------------------------*/
 #ifdef _WIN32
 #include <winsock.h>
 #include <signal.h>
@@ -52,12 +53,14 @@ void RemoveClient(int);		// 채팅 탈퇴 처리 함수
 #define BUF_LEN	128
 #define CHAT_SERVER "0.0.0.0"
 #define CHAT_PORT "30000"
-#define USE_NICKNAME
-
-char username[BUF_LEN];
+char userlist[MAXCLIENTS][BUF_LEN]; // user name 보관용
+#define CHAT_CMD_LOGIN	"/login"		// connect하면 user name 전송 "/login atom"
+#define CHAT_CMD_LIST	"/list"		// userlist 요청
+#define CHAT_CMD_EXIT	"/exit"		// 종료
+#define CHAT_CMD_TO		"/to"		// 귓속말 "/to atom Hi there.."
 
 int main(int argc, char* argv[]) {
-	char buf[BUF_LEN];
+	char buf[BUF_LEN], buf1[BUF_LEN], buf2[BUF_LEN], buf3[BUF_LEN];
 	int i, j, n, ret;
 	int server_fd, client_fd, client_len;
 	unsigned int set = 1;
@@ -81,7 +84,7 @@ int main(int argc, char* argv[]) {
 	main_socket = server_fd;
 #endif
 
-	printf("chat_server2 waiting connection..\n");
+	printf("chat_server3 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
@@ -140,11 +143,45 @@ int main(int argc, char* argv[]) {
 					continue;
 				}
 				printf("received %d from client[%d] : %s", n, i, buf);
-				sscanf(buf, "%s", username);
-				printf("\nnickname=%s\n", username);
-
+				// "/login username" --> buf1 = /login, buf2 = username
+				// "/list" --> buf1 = /list
+				// "[username] message .." buf1 = [username], buf2 = message ...
+				sscanf(buf, "%s", buf1); // 처음 문자열 분리 strtok() 사용하지 않는다.
+				n = strlen(buf1); // "/login username" or "[username] Hello" 에서 /login 나 [username] 만 분리
+				strncpy(buf2, buf + n + 1, BUF_LEN - (n + 1)); // username 또는 메시지 분리
+				// /login 처리
+				if (strncmp(buf1, CHAT_CMD_LOGIN, strlen(CHAT_CMD_LOGIN)) == 0) { // "/login"
+					strcpy(userlist[i], buf2); // username 보관
+					printf("\nuserlist[%d] = %s\n", i, userlist[i]);
+					continue;
+				}
+				if (strncmp(buf2, CHAT_CMD_LIST, strlen(CHAT_CMD_LIST)) == 0) { // "/list"
+					printf("Sending user list to client[%d] %s\n", i, userlist[i]);
+					sprintf(buf, "User\tlist\n-----------------\n");
+					if (send(client_fds[i], buf, BUF_LEN, 0) < 0) {
+						printf("client[%d] send error.", i);
+						client_error[i] = 1;
+						continue;
+					}
+					for (j = 0; j < num_chat; j++) {
+						sprintf(buf, "%02d\t%s\n", j, userlist[j]);
+						if (send(client_fds[i], buf, BUF_LEN, 0) < 0) {
+							printf("client[%d] send error.", i);
+							client_error[i] = 1;
+							break;
+						}
+					}
+					sprintf(buf, "-----------------\n");
+					if (send(client_fds[i], buf, BUF_LEN, 0) < 0) {
+						printf("client[%d] send error.", i);
+						client_error[i] = 1;
+						continue;
+					}
+					continue;
+				}
 				// 종료문자 처리
-				if (strncmp(buf + strlen(username) + 1, EXIT, strlen(EXIT)) == 0) {
+				// exit 대신 /exit 로 변경.
+				if (strncmp(buf2, CHAT_CMD_EXIT, strlen(CHAT_CMD_EXIT)) == 0) { // "/exit"
 					RemoveClient(i);
 					continue;
 				}
@@ -176,10 +213,13 @@ void RemoveClient(int i) {
 	close(client_fds[i]);
 #endif
 	// 마지막 client를 삭제된 자리로 이동 (한칸씩 내릴 필요가 없다)
-	if (i != num_chat - 1)
+	printf("client[%d] %s 퇴장. 현재 참가자 수 = %d\n", i, userlist[i], num_chat-1);
+	if (i != num_chat - 1) {
 		client_fds[i] = client_fds[num_chat - 1];
+		strcpy(userlist[i], userlist[num_chat - 1]);
+	}
 	num_chat--;
-	printf("client[%d] 퇴장. 현재 참가자 수 = %d\n", i, num_chat);
+
 }
 
 // client_fds[] 내의 최대 소켓번호 확인

@@ -1,7 +1,7 @@
 /*
-파일명 : chat_client2.c
-기  능 : 채팅 클라이언트, username 처리
-사용법 : chat_client2 [host] [port]
+파일명 : chat_client3.c
+기  능 : 채팅 클라이언트, username 사용, /login, /list, /exit 처리.
+사용법 : chat_client3 [host] [port]
 네트워크와 키보드 동시 처리 방법
 Linux : select() 사용
 Windows : socket()을 Non-blocking mode 와 kbhit()을 이용하여 폴링 구조 사용
@@ -49,9 +49,12 @@ void init_winsock()
 #define CHAT_PORT "30000"
 #define BUF_LEN 128
 
-#define EXIT	"exit"
+#define CHAT_CMD_LOGIN	"/login"
+#define CHAT_CMD_LIST	"/list"
+#define CHAT_CMD_EXIT	"/exit"
 
-char username[BUF_LEN];	// user name
+char username[BUF_LEN]; // user name
+void read_key_send(int s, char* buf, char* buf2); // key입력후 보내는 code (Linux/Windows공용)
 
 int main(int argc, char* argv[]) {
 	char buf1[BUF_LEN + 1], buf2[BUF_LEN + 1];
@@ -66,10 +69,9 @@ int main(int argc, char* argv[]) {
 		ip_addr = argv[1];
 		port_no = argv[2];
 	}
-
-	printf("chat_client2 running.\n");
+	printf("chat_client3 running.\n");
 	printf("Enter user name : ");
-	scanf("%s", username);	getchar();	// \n 제거
+	scanf("%s", username); getchar(); // \n제거
 
 #ifdef WIN32
 	printf("Windows : ");
@@ -93,7 +95,7 @@ int main(int argc, char* argv[]) {
 	server_addr.sin_port = htons(atoi(port_no));
 
 	/* 연결요청 */
-	printf("chat_client2 connecting %s %s\n", ip_addr, port_no);
+	printf("Connecting %s %s\n", ip_addr, port_no);
 
 	/* 연결요청 */
 	if (connect(s, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
@@ -102,6 +104,12 @@ int main(int argc, char* argv[]) {
 	}
 	else {
 		printf("채팅 서버에 접속되었습니다. \n");
+	}
+	memset(buf1, 0, BUF_LEN);
+	sprintf(buf1, "%s %s", CHAT_CMD_LOGIN, username);
+	if (send(s, buf1, BUF_LEN, 0) < 0) {
+		printf("username send error\n");
+		exit(0);
 	}
 #ifdef WIN32
 	u_long iMode = 1;
@@ -120,22 +128,7 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 		if (kbhit()) { // key 가 눌려있으면 read key --> write to chat server
-			memset(buf1, 0, BUF_LEN);
-			if (fgets(buf1, BUF_LEN, stdin)) { // Enter key 까지 입력 받고 전송
-				sprintf(buf2, "[%s] %s", username, buf1);
-				if (send(s, buf2, BUF_LEN, 0) < 0) {
-					printf("send error.\n");
-					break;
-				}
-				if (strncmp(buf1, EXIT, strlen(EXIT)) == 0) {
-					printf("Good bye.\n");
-					break;
-				}
-			}
-			else {
-				printf("fgets error\n");
-				break;
-			}
+			read_key_send(s, buf1, buf2);
 		}
 		Sleep(100); // Non-blocking I/O CPU 부담을 줄인다.
 	}
@@ -164,23 +157,34 @@ int main(int argc, char* argv[]) {
 		}
 		// keyboard 입력이 있는 경우
 		if (FD_ISSET(0, &read_fds)) {
-			if (fgets(buf1, BUF_LEN, stdin) > 0) {
-				if (send(s, buf1, BUF_LEN, 0) < 0) {
-					printf("send error.\n");
-					break;
-				}
-				if (strncmp(buf1, EXIT, strlen(EXIT)) == 0) {
-					printf("Good bye.\n");
-					close(s);
-					break;
-				}
-			}
-			else {
-				printf("fgets error\n");
-				break;
-			}
-
+			read_key_send(s, buf1, buf2);
 		}
 	}
 #endif
+}
+
+// Keyboard에서 읽어서 서버로 전송하는 함수 (Linux/Windows 공용)
+void read_key_send(int s, char* buf1, char* buf2)
+{
+	printf("%s> ", username); // keyboard 입력이 있으면 앞에 prompt를 출력해준다.
+	if (fgets(buf1, BUF_LEN, stdin) > 0) {
+		sprintf(buf2, "[%s] %s", username, buf1);
+		if (send(s, buf2, BUF_LEN, 0) < 0) {
+			printf("send error.\n");
+			exit(0);
+		}
+		if (strncmp(buf1, CHAT_CMD_EXIT, strlen(CHAT_CMD_EXIT)) == 0) {
+			printf("Good bye.\n");
+#ifdef WIN32
+			closesocket(s);
+#else
+			close(s);
+#endif
+			exit(0);
+		}
+	}
+	else {
+		printf("fgets error\n");
+		exit(0);
+	}
 }
