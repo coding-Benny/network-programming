@@ -1,9 +1,8 @@
-/*----------------------
- ÆÄÀÏ¸í : chat_server3.c
- ±â  ´É : Ã¤ÆÃ¼­¹ö, username »ç¿ë, /login, /list, /exit Ã³¸®.
- ÄÄÆÄÀÏ : cc -o chat_server3 chat_server3.c
- »ç¿ë¹ı : chat_server3 [port]
-------------------------*/
+/*
+ íŒŒì¼ëª… : chat_server4.c
+ ê¸°  ëŠ¥ : ì±„íŒ…ì„œë²„, chat_server3 + /to, /sleep, /wakeup, /with, /withend, /sendfile, .. ë“±ë“± ì¶”ê°€ êµ¬í˜„
+ ì‚¬ìš©ë²• : chat_server4 [port]
+*/
 #ifdef _WIN32
 #include <winsock.h>
 #include <signal.h>
@@ -35,37 +34,44 @@ void init_winsock()
 	WORD sversion;
 	u_long iMode = 1;
 
-	// winsock »ç¿ëÀ» À§ÇØ ÇÊ¼öÀûÀÓ
+	// winsock ì‚¬ìš©ì„ ìœ„í•´ í•„ìˆ˜ì ì„
 	signal(SIGINT, exit_callback);
 	sversion = MAKEWORD(1, 1);
 	WSAStartup(sversion, &wsadata);
 }
 #endif
 
-#define MAXCLIENTS 64		// ÃÖ´ë Ã¤ÆÃ Âü°¡ÀÚ ¼ö
-#define EXIT	"exit"		// Ã¤ÆÃ Á¾·á ¹®ÀÚ¿­
-int maxfdp;              	// select() ¿¡¼­ °¨½ÃÇØ¾ßÇÒ # of socket º¯¼ö getmax() return °ª + 1
-int getmax(int);			// ÃÖ´ë ¼ÒÄÏ¹øÈ£ °è»ê
-int num_chat = 0;         	// Ã¤ÆÃ Âü°¡ÀÚ ¼ö
-int client_fds[MAXCLIENTS];	// Ã¤ÆÃ¿¡ Âü°¡ÀÚ ¼ÒÄÏ¹øÈ£ ¸ñ·Ï
-void RemoveClient(int);		// Ã¤ÆÃ Å»Åğ Ã³¸® ÇÔ¼ö
+#define MAXCLIENTS 64		// ìµœëŒ€ ì±„íŒ… ì°¸ê°€ì ìˆ˜
+#define EXIT	"exit"		// ì±„íŒ… ì¢…ë£Œ ë¬¸ìì—´
+int maxfdp;              	// select() ì—ì„œ ê°ì‹œí•´ì•¼í•  # of socket ë³€ìˆ˜ getmax() return ê°’ + 1
+int getmax(int);			// ìµœëŒ€ ì†Œì¼“ë²ˆí˜¸ ê³„ì‚°
+int num_chat = 0;         	// ì±„íŒ… ì°¸ê°€ì ìˆ˜
+int client_fds[MAXCLIENTS];	// ì±„íŒ…ì— ì°¸ê°€ì ì†Œì¼“ë²ˆí˜¸ ëª©ë¡
+void RemoveClient(int);		// ì±„íŒ… íƒˆí‡´ ì²˜ë¦¬ í•¨ìˆ˜
 
 #define BUF_LEN	128
 #define CHAT_SERVER "0.0.0.0"
 #define CHAT_PORT "30000"
-char userlist[MAXCLIENTS][BUF_LEN]; // user name º¸°ü¿ë
-#define CHAT_CMD_LOGIN	"/login"		// connectÇÏ¸é user name Àü¼Û "/login atom"
-#define CHAT_CMD_LIST	"/list"		// userlist ¿äÃ»
-#define CHAT_CMD_EXIT	"/exit"		// Á¾·á
-#define CHAT_CMD_TO		"/to"		// ±Ó¼Ó¸» "/to atom Hi there.."
+char userlist[MAXCLIENTS][BUF_LEN]; // user name ë³´ê´€ìš©
+int usersleep[MAXCLIENTS]; // sleep ìƒíƒœì¸ì§€ ìƒíƒœ ë³´ê´€
+
+#define CHAT_CMD_LOGIN	"/login"		// connectí•˜ë©´ user name ì „ì†¡ "/login atom"
+#define CHAT_CMD_LIST	"/list"		// userlist ìš”ì²­
+#define CHAT_CMD_EXIT	"/exit"		// ì¢…ë£Œ
+#define CHAT_CMD_TO		"/to"		// ê·“ì†ë§ "/to atom Hi there.."
+#define CHAT_CMD_SLEEP	"/sleep"	// ëŒ€ê¸°ëª¨ë“œ(ë¶€ì¬ì¤‘) ì„¤ì •
+#define CHAT_CMD_WAKEUP	"/wakeup"	// wakeup ë˜ëŠ” message ì „ì†¡í•˜ë©´ ìë™ wakeup
+#define CHAT_CMD_WITH	"/with"		// /with nickname , nicknameê³¼ 1:1 ì±„íŒ… ëª¨ë“œ ì‹œì‘
+#define CHAT_CMD_WITHEND	"/end"	// 1:1 ì±„íŒ… ì¢…ë£Œ
+#define CHAT_CMD_FILESEND	"/filesend"	// /filesend nickname data.txt íŒŒì¼ ì „ì†¡
 
 int main(int argc, char* argv[]) {
 	char buf[BUF_LEN], buf1[BUF_LEN], buf2[BUF_LEN], buf3[BUF_LEN];
-	int i, j, n, ret;
+	int i, j, k, n, ret;
 	int server_fd, client_fd, client_len;
 	unsigned int set = 1;
 	char* ip_addr = CHAT_SERVER, * port_no = CHAT_PORT;
-	fd_set  read_fds;     // ÀĞ±â¸¦ °¨ÁöÇÒ ¼ÒÄÏ¹øÈ£ ±¸Á¶Ã¼ server_fd ¿Í client_fds[] ¸¦ ¼³Á¤ÇÑ´Ù.
+	fd_set  read_fds;     // ì½ê¸°ë¥¼ ê°ì§€í•  ì†Œì¼“ë²ˆí˜¸ êµ¬ì¡°ì²´ server_fd ì™€ client_fds[] ë¥¼ ì„¤ì •í•œë‹¤.
 	struct sockaddr_in  client_addr, server_addr;
 	int client_error[MAXCLIENTS];
 
@@ -75,7 +81,7 @@ int main(int argc, char* argv[]) {
 #else
 	printf("Linux : ");
 #endif
-	/* ¼ÒÄÏ »ı¼º */
+	/* ì†Œì¼“ ìƒì„± */
 	if ((server_fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		printf("Server: Can't open stream socket.");
 		exit(0);
@@ -84,13 +90,13 @@ int main(int argc, char* argv[]) {
 	main_socket = server_fd;
 #endif
 
-	printf("chat_server3 waiting connection..\n");
+	printf("chat_server4 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
-	/* server_addrÀ» '\0'À¸·Î ÃÊ±âÈ­ */
+	/* server_addrì„ '\0'ìœ¼ë¡œ ì´ˆê¸°í™” */
 	memset((char*)&server_addr, 0, sizeof(server_addr));
-	/* server_addr ¼¼ÆÃ */
+	/* server_addr ì„¸íŒ… */
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	server_addr.sin_port = htons(atoi(port_no));
@@ -99,22 +105,22 @@ int main(int argc, char* argv[]) {
 		printf("Server: Can't bind local address.\n");
 		exit(0);
 	}
-	/* Å¬¶óÀÌ¾ğÆ®·ÎºÎÅÍ ¿¬°á¿äÃ»À» ±â´Ù¸² */
+	/* í´ë¼ì´ì–¸íŠ¸ë¡œë¶€í„° ì—°ê²°ìš”ì²­ì„ ê¸°ë‹¤ë¦¼ */
 	listen(server_fd, 5);
 
 	while (1) {
-		FD_ZERO(&read_fds); // º¯¼ö ÃÊ±âÈ­
-		FD_SET(server_fd, &read_fds); // accept() ´ë»ó ¼ÒÄÏ ¼³Á¤
-		for (i = 0; i < num_chat; i++) // Ã¤ÆÃ¿¡ Âü°¡ÁßÀÌ ¸ğµç client ¼ÒÄÏÀ» reac() ´ë»ó Ãß°¡
+		FD_ZERO(&read_fds); // ë³€ìˆ˜ ì´ˆê¸°í™”
+		FD_SET(server_fd, &read_fds); // accept() ëŒ€ìƒ ì†Œì¼“ ì„¤ì •
+		for (i = 0; i < num_chat; i++) // ì±„íŒ…ì— ì°¸ê°€ì¤‘ì´ ëª¨ë“  client ì†Œì¼“ì„ reac() ëŒ€ìƒ ì¶”ê°€
 			FD_SET(client_fds[i], &read_fds);
-		maxfdp = getmax(server_fd) + 1;     // °¨½Ã´ë»ó ¼ÒÄÏÀÇ ¼ö¸¦ °è»ê
+		maxfdp = getmax(server_fd) + 1;     // ê°ì‹œëŒ€ìƒ ì†Œì¼“ì˜ ìˆ˜ë¥¼ ê³„ì‚°
 		if (select(maxfdp, &read_fds, (fd_set*)0, (fd_set*)0, (struct timeval*)0) <= 0) {
 			printf("select error <= 0 \n");
 			exit(0);
 		}
-		// ÃÊ±â ¼ÒÄÏ Áï, server_fd ¿¡ º¯È­°¡ ÀÖ´ÂÁö °Ë»ç
+		// ì´ˆê¸° ì†Œì¼“ ì¦‰, server_fd ì— ë³€í™”ê°€ ìˆëŠ”ì§€ ê²€ì‚¬
 		if (FD_ISSET(server_fd, &read_fds)) {
-			// º¯È­°¡ ÀÖ´Ù --> client °¡ connect·Î ¿¬°á ¿äÃ»À» ÇÑ °Í
+			// ë³€í™”ê°€ ìˆë‹¤ --> client ê°€ connectë¡œ ì—°ê²° ìš”ì²­ì„ í•œ ê²ƒ
 			client_len = sizeof(client_addr);
 			client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
 			if (client_fd == -1) {
@@ -124,20 +130,20 @@ int main(int argc, char* argv[]) {
 				printf("Client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr),
 					ntohs(client_addr.sin_port));
 				printf("client_fd = %d\n", client_fd);
-				/* Ã¤ÆÃ Å¬¶óÀÌ¾ğÆ® ¸ñ·Ï¿¡ Ãß°¡ */
-				printf("client[%d] ÀÔÀå. ÇöÀç Âü°¡ÀÚ ¼ö = %d\n", num_chat, num_chat + 1);
+				/* ì±„íŒ… í´ë¼ì´ì–¸íŠ¸ ëª©ë¡ì— ì¶”ê°€ */
+				printf("client[%d] ì…ì¥. í˜„ì¬ ì°¸ê°€ì ìˆ˜ = %d\n", num_chat, num_chat + 1);
 				client_fds[num_chat++] = client_fd;
 			}
 		}
 
 		memset(client_error, 0, sizeof(client_error));
-		/* Å¬¶óÀÌ¾ğÆ®°¡ º¸³½ ¸Ş½ÃÁö¸¦ ¸ğµç Å¬¶óÀÌ¾ğÆ®¿¡°Ô ¹æ¼Û */
+		/* í´ë¼ì´ì–¸íŠ¸ê°€ ë³´ë‚¸ ë©”ì‹œì§€ë¥¼ ëª¨ë“  í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ë°©ì†¡ */
 		for (i = 0; i < num_chat; i++) {
-			// °¢°¢ÀÇ clientµéÀÇ I/O º¯È­°¡ ÀÖ´ÂÁö.
+			// ê°ê°ì˜ clientë“¤ì˜ I/O ë³€í™”ê°€ ìˆëŠ”ì§€.
 			if (FD_ISSET(client_fds[i], &read_fds)) {
-				// Read One ¶Ç´Â client ºñÁ¤»ó Á¾·á È®ÀÎ
+				// Read One ë˜ëŠ” client ë¹„ì •ìƒ ì¢…ë£Œ í™•ì¸
 				if ((n = recv(client_fds[i], buf, BUF_LEN, 0)) <= 0) {
-					// client °¡ ºñ Á¤»ó Á¾·áÇÑ °æ¿ì
+					// client ê°€ ë¹„ ì •ìƒ ì¢…ë£Œí•œ ê²½ìš°
 					printf("recv error for client[%d]\n", i);
 					client_error[i] = 1;
 					continue;
@@ -146,13 +152,21 @@ int main(int argc, char* argv[]) {
 				// "/login username" --> buf1 = /login, buf2 = username
 				// "/list" --> buf1 = /list
 				// "[username] message .." buf1 = [username], buf2 = message ...
-				sscanf(buf, "%s", buf1); // Ã³À½ ¹®ÀÚ¿­ ºĞ¸® strtok() »ç¿ëÇÏÁö ¾Ê´Â´Ù.
-				n = strlen(buf1); // "/login username" or "[username] Hello" ¿¡¼­ /login ³ª [username] ¸¸ ºĞ¸®
-				strncpy(buf2, buf + n + 1, BUF_LEN - (n + 1)); // username ¶Ç´Â ¸Ş½ÃÁö ºĞ¸®
-				// /login Ã³¸®
+				sscanf(buf, "%s", buf1); // ì²˜ìŒ ë¬¸ìì—´ ë¶„ë¦¬ strtok() ì‚¬ìš©í•˜ì§€ ì•ŠëŠ”ë‹¤.
+				n = strlen(buf1); // "/login username" or "[username] Hello" ì—ì„œ /login ë‚˜ [username] ë§Œ ë¶„ë¦¬
+				strncpy(buf2, buf + n + 1, BUF_LEN - (n + 1)); // username ë˜ëŠ” ë©”ì‹œì§€ ë¶„ë¦¬
+				// /login ì²˜ë¦¬
 				if (strncmp(buf1, CHAT_CMD_LOGIN, strlen(CHAT_CMD_LOGIN)) == 0) { // "/login"
-					strcpy(userlist[i], buf2); // username º¸°ü
+					strcpy(userlist[i], buf2); // username ë³´ê´€
 					printf("\nuserlist[%d] = %s\n", i, userlist[i]);
+					for (j = 0; j < num_chat - 1; j++) {
+						sprintf(buf, "[%s]ë‹˜ì´ ì…ì¥í•˜ì˜€ìŠµë‹ˆë‹¤.\n", userlist[i]);
+						ret = send(client_fds[j], buf, BUF_LEN, 0);
+						if (ret <= 0) {
+							printf("send error for client[%d]\n", j);
+							client_error[j] = 1;
+						}
+					}
 					continue;
 				}
 				if (strncmp(buf2, CHAT_CMD_LIST, strlen(CHAT_CMD_LIST)) == 0) { // "/list"
@@ -179,15 +193,23 @@ int main(int argc, char* argv[]) {
 					}
 					continue;
 				}
-				// Á¾·á¹®ÀÚ Ã³¸®
-				// exit ´ë½Å /exit ·Î º¯°æ.
+				// ì¢…ë£Œë¬¸ì ì²˜ë¦¬
+				// exit ëŒ€ì‹  /exit ë¡œ ë³€ê²½.
 				if (strncmp(buf2, CHAT_CMD_EXIT, strlen(CHAT_CMD_EXIT)) == 0) { // "/exit"
+					sprintf(buf, "[%s]ë‹˜ì´ í‡´ì¥í•˜ì˜€ìŠµë‹ˆë‹¤.\n", userlist[i]);
 					RemoveClient(i);
+					for (j = 0; j < num_chat; j++) {
+						ret = send(client_fds[j], buf, BUF_LEN, 0);
+						if (ret <= 0) {
+							printf("send error for client[%d]\n", j);
+							client_error[j] = 1;
+						}
+					}
 					continue;
 				}
-				// ¸ğµç Ã¤ÆÃ Âü°¡ÀÚ¿¡°Ô ¸Ş½ÃÁö ¹æ¼Û
+				// ëª¨ë“  ì±„íŒ… ì°¸ê°€ìì—ê²Œ ë©”ì‹œì§€ ë°©ì†¡
 				//printf("%s", buf);
-				// Wrie All
+				// Write All
 				for (j = 0; j < num_chat; j++) {
 					ret = send(client_fds[j], buf, BUF_LEN, 0);
 					if (ret <= 0) {
@@ -197,7 +219,7 @@ int main(int argc, char* argv[]) {
 				}
 			}
 		}
-		// ¿À·ù°¡ ³­ ClientµéÀ» µÚ¿¡¼­ ¾ÕÀ¸·Î °¡¸é¼­ Á¦°ÅÇÑ´Ù.
+		// ì˜¤ë¥˜ê°€ ë‚œ Clientë“¤ì„ ë’¤ì—ì„œ ì•ìœ¼ë¡œ ê°€ë©´ì„œ ì œê±°í•œë‹¤.
 		for (i = num_chat - 1; i >= 0; i--) {
 			if (client_error[i])
 				RemoveClient(i);
@@ -205,15 +227,15 @@ int main(int argc, char* argv[]) {
 	}
 }
 
-/* Ã¤ÆÃ Å»Åğ Ã³¸® */
+/* ì±„íŒ… íƒˆí‡´ ì²˜ë¦¬ */
 void RemoveClient(int i) {
 #ifdef WIN32
 	closesocket(client_fds[i]);
 #else
 	close(client_fds[i]);
 #endif
-	// ¸¶Áö¸· client¸¦ »èÁ¦µÈ ÀÚ¸®·Î ÀÌµ¿ (ÇÑÄ­¾¿ ³»¸± ÇÊ¿ä°¡ ¾ø´Ù)
-	printf("client[%d] %s ÅğÀå. ÇöÀç Âü°¡ÀÚ ¼ö = %d\n", i, userlist[i], num_chat-1);
+	// ë§ˆì§€ë§‰ clientë¥¼ ì‚­ì œëœ ìë¦¬ë¡œ ì´ë™ (í•œì¹¸ì”© ë‚´ë¦´ í•„ìš”ê°€ ì—†ë‹¤)
+	printf("client[%d] %s í‡´ì¥. í˜„ì¬ ì°¸ê°€ì ìˆ˜ = %d\n", i, userlist[i], num_chat - 1);
 	if (i != num_chat - 1) {
 		client_fds[i] = client_fds[num_chat - 1];
 		strcpy(userlist[i], userlist[num_chat - 1]);
@@ -222,8 +244,8 @@ void RemoveClient(int i) {
 
 }
 
-// client_fds[] ³»ÀÇ ÃÖ´ë ¼ÒÄÏ¹øÈ£ È®ÀÎ
-// select(maxfds, ..) ¿¡¼­ maxfds = getmax(server_fd) + 1
+// client_fds[] ë‚´ì˜ ìµœëŒ€ ì†Œì¼“ë²ˆí˜¸ í™•ì¸
+// select(maxfds, ..) ì—ì„œ maxfds = getmax(server_fd) + 1
 int getmax(int k) {
 	int max = k;
 	int r;
