@@ -66,7 +66,7 @@ int usersleep[MAXCLIENTS]; // sleep 상태인지 상태 보관
 #define CHAT_CMD_FILESEND	"/filesend"	// /filesend nickname data.txt 파일 전송
 
 int main(int argc, char* argv[]) {
-	char buf[BUF_LEN], buf1[BUF_LEN], buf2[BUF_LEN], buf3[BUF_LEN];
+	char buf[BUF_LEN], buf1[BUF_LEN], buf2[BUF_LEN], buf3[BUF_LEN], recipient[BUF_LEN] = { 0 }, msg[BUF_LEN] = { 0 };
 	int i, j, k, n, ret;
 	int server_fd, client_fd, client_len;
 	unsigned int set = 1;
@@ -155,7 +155,9 @@ int main(int argc, char* argv[]) {
 				sscanf(buf, "%s", buf1); // 처음 문자열 분리 strtok() 사용하지 않는다.
 				n = strlen(buf1); // "/login username" or "[username] Hello" 에서 /login 나 [username] 만 분리
 				strncpy(buf2, buf + n + 1, BUF_LEN - (n + 1)); // username 또는 메시지 분리
-				// /login 처리
+				strncpy(buf3, buf2 + 4, BUF_LEN - (n + 1));
+				printf("buf2=%s\n", buf2);
+				/* 로그인 */
 				if (strncmp(buf1, CHAT_CMD_LOGIN, strlen(CHAT_CMD_LOGIN)) == 0) { // "/login"
 					strcpy(userlist[i], buf2); // username 보관
 					printf("\nuserlist[%d] = %s\n", i, userlist[i]);
@@ -169,6 +171,7 @@ int main(int argc, char* argv[]) {
 					}
 					continue;
 				}
+				/* 참여자 리스트 */
 				if (strncmp(buf2, CHAT_CMD_LIST, strlen(CHAT_CMD_LIST)) == 0) { // "/list"
 					printf("Sending user list to client[%d] %s\n", i, userlist[i]);
 					sprintf(buf, "User\tlist\n-----------------\n");
@@ -193,8 +196,25 @@ int main(int argc, char* argv[]) {
 					}
 					continue;
 				}
-				// 종료문자 처리
-				// exit 대신 /exit 로 변경.
+				/* 귓속말 기능 */
+				if (strncmp(buf2, CHAT_CMD_TO, strlen(CHAT_CMD_TO)) == 0) {  // "/to"
+					sscanf(buf3, "%s %[^\t\n]", recipient, msg);
+					for (j = 0; j < MAXCLIENTS; j++) {
+						if (strcmp(userlist[j], recipient) == 0 && usersleep[j] == 0) {
+							printf("[귓속말] from [%s] to %s : %s\n", userlist[i], recipient, msg);
+							sprintf(buf, "[귓속말] [%s] %s\n", userlist[i], msg);
+
+							ret = send(client_fds[j], buf, BUF_LEN, 0);
+							if (ret <= 0) {
+								printf("send error for client[%d]\n", j);
+								client_error[j] = 1;
+							}
+						}
+						continue;
+					}
+					continue;
+				}
+				/* 채팅 종료 */
 				if (strncmp(buf2, CHAT_CMD_EXIT, strlen(CHAT_CMD_EXIT)) == 0) { // "/exit"
 					sprintf(buf, "[%s]님이 퇴장하였습니다.\n", userlist[i]);
 					RemoveClient(i);
@@ -207,14 +227,14 @@ int main(int argc, char* argv[]) {
 					}
 					continue;
 				}
-				// 모든 채팅 참가자에게 메시지 방송
-				//printf("%s", buf);
-				// Write All
+				/* 모든 채팅 참가자에게 메시지 방송 */
 				for (j = 0; j < num_chat; j++) {
-					ret = send(client_fds[j], buf, BUF_LEN, 0);
-					if (ret <= 0) {
-						printf("send error for client[%d]\n", j);
-						client_error[i] = 1;
+					if (usersleep[j] == 0) {
+						ret = send(client_fds[j], buf, BUF_LEN, 0);
+						if (ret <= 0) {
+							printf("send error for client[%d]\n", j);
+							client_error[i] = 1;
+						}
 					}
 				}
 			}
