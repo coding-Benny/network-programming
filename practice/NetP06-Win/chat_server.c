@@ -54,21 +54,20 @@ void RemoveClient(int);		// 채팅 탈퇴 처리 함수
 #define CHAT_PORT "30000"
 char userlist[MAXCLIENTS][BUF_LEN]; // user name 보관용
 int usersleep[MAXCLIENTS] = { 0 }; // sleep 상태인지 상태 보관
+int userwith[MAXCLIENTS] = { 0 };	// 1:1 채팅 연결 정보 보관
+int k = -1;
 
-#define CHAT_CMD_LOGIN	"/login"		// connect하면 user name 전송 "/login atom"
-#define CHAT_CMD_LIST	"/list"		// userlist 요청
-#define CHAT_CMD_EXIT	"/exit"		// 종료
-#define CHAT_CMD_TO		"/to"		// 귓속말 "/to atom Hi there.."
-#define CHAT_CMD_SLEEP	"/sleep"	// 대기모드(부재중) 설정
-#define CHAT_CMD_WAKEUP	"/wakeup"	// wakeup 또는 message 전송하면 자동 wakeup
-#define CHAT_CMD_WITH	"/with"		// /with nickname , nickname과 1:1 채팅 모드 시작
-#define CHAT_CMD_WITHEND	"/end"	// 1:1 채팅 종료
-#define CHAT_CMD_FILESEND	"/filesend"	// /filesend nickname data.txt 파일 전송
+#define CHAT_CMD_LOGIN		"/login"	// connect하면 user name 전송 "/login atom"
+#define CHAT_CMD_LIST		"/list"		// userlist 요청
+#define CHAT_CMD_EXIT		"/exit"		// 종료
+#define CHAT_CMD_TO			"/to"		// 귓속말 "/to atom Hi there.."
+#define CHAT_CMD_SLEEP		"/sleep"	// 대기모드(부재중) 설정
+#define CHAT_CMD_WAKEUP		"/wakeup"	// wakeup 또는 message 전송하면 자동 wakeup
 
 int main(int argc, char* argv[]) {
 	char buf[BUF_LEN], buf1[BUF_LEN], buf2[BUF_LEN], buf3[BUF_LEN];
 	char recipient[BUF_LEN] = { 0 }, msg[BUF_LEN] = { 0 }, status[BUF_LEN] = { 0 };
-	int i, j, k, n, ret;
+	int i, j, n, ret;
 	int server_fd, client_fd, client_len;
 	unsigned int set = 1;
 	char* ip_addr = CHAT_SERVER, * port_no = CHAT_PORT;
@@ -156,18 +155,21 @@ int main(int argc, char* argv[]) {
 				sscanf(buf, "%s", buf1); // 처음 문자열 분리 strtok() 사용하지 않는다.
 				n = strlen(buf1); // "/login username" or "[username] Hello" 에서 /login 나 [username] 만 분리
 				strncpy(buf2, buf + n + 1, BUF_LEN - (n + 1)); // username 또는 메시지 분리
-				strncpy(buf3, buf2 + 4, BUF_LEN - (n + 1));
+				sscanf(buf2, "%s", buf2);
+				strncpy(buf3, buf + n + strlen(buf2) + 2, BUF_LEN - (n + 1));
 
 				/* 로그인 */
 				if (strncmp(buf1, CHAT_CMD_LOGIN, strlen(CHAT_CMD_LOGIN)) == 0) { // "/login"
 					strcpy(userlist[i], buf2); // username 보관
 					printf("\nuserlist[%d] = %s\n", i, userlist[i]);
-					for (j = 0; j < num_chat - 1; j++) {
-						sprintf(buf, "[%s]님이 입장하였습니다.\n", userlist[i]);
-						ret = send(client_fds[j], buf, BUF_LEN, 0);
-						if (ret <= 0) {
-							printf("send error for client[%d]\n", j);
-							client_error[j] = 1;
+					for (j = 0; j < num_chat; j++) {
+						if (j != i) {	// 본인 제외 다른 사용자에게 입장을 알린다.
+							sprintf(buf, "[%s]님이 입장하였습니다.\n", userlist[i]);
+							ret = send(client_fds[j], buf, BUF_LEN, 0);
+							if (ret <= 0) {
+								printf("send error for client[%d]\n", j);
+								client_error[j] = 1;
+							}
 						}
 					}
 					continue;
@@ -182,9 +184,7 @@ int main(int argc, char* argv[]) {
 						continue;
 					}
 					for (j = 0; j < num_chat; j++) {
-						if (usersleep[j] == 0)
-							status[j] = 'O';
-						sprintf(buf, "%02d\t%s\t%c\n", j, userlist[j], status[j]);
+						sprintf(buf, "%02d\t%s\t%s\n", j, userlist[j], usersleep[j] ? "S" : "O");
 						if (send(client_fds[i], buf, BUF_LEN, 0) < 0) {
 							printf("client[%d] send error.", i);
 							client_error[i] = 1;
@@ -201,56 +201,48 @@ int main(int argc, char* argv[]) {
 				}
 				/* 귓속말 기능 */
 				if (strncmp(buf2, CHAT_CMD_TO, strlen(CHAT_CMD_TO)) == 0) {	// "/to"
-					sscanf(buf3, "%s %[^\t\n]", recipient, msg);
+					char username[BUF_LEN], to[BUF_LEN], to_user[BUF_LEN], msg[BUF_LEN];
+					sscanf(buf, "%s %s %s", username, to, to_user);
+					strcpy(msg, buf + strlen(username) + strlen(to) + strlen(to_user) + 3);
+					printf("[귓속말] from %s to %s : %s", username, to_user, msg);
+					// 귓속말 전송
 					for (j = 0; j < MAXCLIENTS; j++) {
-						if (strcmp(userlist[j], recipient) == 0 && usersleep[j] == 0) {
-							printf("[귓속말] from [%s] to %s : %s\n", userlist[i], recipient, msg);
-							sprintf(buf, "[귓속말] [%s] %s\n", userlist[i], msg);
-
-							ret = send(client_fds[j], buf, BUF_LEN, 0);
-							if (ret <= 0) {
+						// user가 sleep이면 어떤 메시지도 수신하지 않는다.
+						if (strcmp(userlist[j], to_user) == 0 && usersleep[j] != 1) {
+							sprintf(buf2, "[귓속말] %s %s", username, msg);
+							if (send(client_fds[j], buf, BUF_LEN, 0) < 0) {
 								printf("send error for client[%d]\n", j);
 								client_error[j] = 1;
+								break;
 							}
 						}
-						continue;
 					}
 					continue;
 				}
 				/* 부재중 */
 				if (strncmp(buf2, CHAT_CMD_SLEEP, strlen(CHAT_CMD_SLEEP)) == 0) {	// "/sleep"
 					usersleep[i] = 1;
-					status[i] = 'S';
 					continue;
 				}
 				/* 깨어남 */
 				if (strncmp(buf2, CHAT_CMD_WAKEUP, strlen(CHAT_CMD_WAKEUP)) == 0) {	// "/wakeup"
 					usersleep[i] = 0;
-					status[i] = 'O';
-					//printf("%s wakeup! %d, %c\n", userlist[i], usersleep[i], status[i]);
 					continue;
 				}
 				/* 채팅 종료 */
 				if (strncmp(buf2, CHAT_CMD_EXIT, strlen(CHAT_CMD_EXIT)) == 0) { // "/exit"
-					sprintf(buf, "[%s]님이 퇴장하였습니다.\n", userlist[i]);
 					RemoveClient(i);
-					for (j = 0; j < num_chat; j++) {
-						ret = send(client_fds[j], buf, BUF_LEN, 0);
-						if (ret <= 0) {
-							printf("send error for client[%d]\n", j);
-							client_error[j] = 1;
-						}
-					}
 					continue;
 				}
 
 				/* 모든 채팅 참가자에게 메시지 방송 */
+				usersleep[i] = 0;	// message가 있으면 무조건 깨어난다.
 				for (j = 0; j < num_chat; j++) {
-					if (usersleep[j] == 0) {
+					if (usersleep[j] != 1) {	// user가 sleep이면 어떤 메시지도 수신하지 않는다.
 						ret = send(client_fds[j], buf, BUF_LEN, 0);
 						if (ret <= 0) {
 							printf("send error for client[%d]\n", j);
-							client_error[i] = 1;
+							client_error[j] = 1;
 						}
 					}
 				}
@@ -273,12 +265,19 @@ void RemoveClient(int i) {
 #endif
 	// 마지막 client를 삭제된 자리로 이동 (한칸씩 내릴 필요가 없다)
 	printf("client[%d] %s 퇴장. 현재 참가자 수 = %d\n", i, userlist[i], num_chat - 1);
+	for (int j = 0; j < num_chat; j++) {
+		char buf[BUF_LEN];
+		if (j != i) {	// 본인 제외 다른 사용자에게 퇴장을 알린다.
+			sprintf(buf, "[%s]님이 퇴장하였습니다.\n", userlist[i]);
+			send(client_fds[j], buf, BUF_LEN, 0);
+		}
+	}
 	if (i != num_chat - 1) {
-		client_fds[i] = client_fds[num_chat - 1];
-		strcpy(userlist[i], userlist[num_chat - 1]);
+		client_fds[i] = client_fds[num_chat - 1];	// socket 정보
+		strcpy(userlist[i], userlist[num_chat - 1]);	// username
+		usersleep[i] = usersleep[num_chat - 1];	// sleep 상태
 	}
 	num_chat--;
-
 }
 
 // client_fds[] 내의 최대 소켓번호 확인
