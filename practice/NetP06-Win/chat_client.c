@@ -1,7 +1,7 @@
 /*
-파일명 : chat_client3.c
-기  능 : 채팅 클라이언트, username 사용, /login, /list, /exit 처리.
-사용법 : chat_client3 [host] [port]
+파일명 : chat_client4.c
+기  능 : 채팅 클라이언트, username 사용, /login, /list, /exit /sleep /wakeup /to 처리, chat_clien3와 동일.
+사용법 : chat_client4 [host] [port]
 네트워크와 키보드 동시 처리 방법
 Linux : select() 사용
 Windows : socket()을 Non-blocking mode 와 kbhit()을 이용하여 폴링 구조 사용
@@ -52,12 +52,16 @@ void init_winsock()
 #define CHAT_CMD_LOGIN	"/login"
 #define CHAT_CMD_LIST	"/list"
 #define CHAT_CMD_EXIT	"/exit"
+#define CHAT_CMD_WITH		"/with"		// /with nickname , nickname과 1:1 채팅 모드 시작
+#define CHAT_CMD_WITH_YES	"/withyes"	// 1:1 대화 허락 [user2] /withyes user1
+#define CHAT_CMD_WITH_NO	"/withno"	// 1:1 대화 거부 [user2] /withno user1
+#define CHAT_CMD_WITH_END	"/end"		// 1:1 채팅 종료 [user1] /end or [user2] /end
 
 char username[BUF_LEN]; // user name
 void read_key_send(int s, char* buf, char* buf2); // key입력후 보내는 code (Linux/Windows공용)
 
 int main(int argc, char* argv[]) {
-	char buf1[BUF_LEN + 1], buf2[BUF_LEN + 1];
+	char buf1[BUF_LEN + 1], buf2[BUF_LEN + 1], buf3[BUF_LEN + 1];
 	int s, n, len_in, len_out;
 	struct sockaddr_in server_addr;
 	char* ip_addr = CHAT_SERVER, * port_no = CHAT_PORT;
@@ -69,7 +73,7 @@ int main(int argc, char* argv[]) {
 		ip_addr = argv[1];
 		port_no = argv[2];
 	}
-	printf("chat_client3 running.\n");
+	printf("chat_client4 running.\n");
 	printf("Enter user name : ");
 	scanf("%s", username); getchar(); // \n제거
 
@@ -119,9 +123,32 @@ int main(int argc, char* argv[]) {
 		// Non-blocking read이므로 데이터가 앖으면 기다리지 않고 0으로 return
 		n = recv(s, buf2, BUF_LEN, 0);
 		if (n > 0) { // non-blocking read
-		// network에서 읽어서
-		// 화면에 출력
-			printf("%s", buf2);
+		// network에서 읽어서 화면에 출력
+			if (strncmp(buf2, CHAT_CMD_WITH, strlen(CHAT_CMD_WITH)) == 0) {
+				char res[BUF_LEN];
+				strncpy(buf3, buf2 + 6, BUF_LEN - (strlen(buf2) + 6));
+				while (1) {
+					printf("[%s]님이 1:1 대화를 요청했습니다.(y/n)? ", buf3);
+					fgets(res, BUF_LEN, stdin);
+
+					if (strcmp(res, "\n") == 0)
+						continue;
+
+					if (strcmp(res, "y\n") == 0)
+						sprintf(res, "[%s] %s %s\n", username, CHAT_CMD_WITH_YES, buf3);
+					else if (strcmp(res, "n\n") == 0)
+						sprintf(res, "[%s] %s %s\n", username, CHAT_CMD_WITH_NO, buf3);
+
+					if (send(s, res, BUF_LEN, 0) < 0) {
+						printf("send error.\n");
+						exit(0);
+					}
+					else
+						break;
+				}
+			}
+			else
+				printf("%s", buf2);
 		}
 		else if (WSAGetLastError() != WSAEWOULDBLOCK) {
 			printf("recv error\n"); // server 가 종료되었거나 네트워크 오류

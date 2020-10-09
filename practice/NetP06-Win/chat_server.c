@@ -1,7 +1,11 @@
 /*
- íŒŒì¼ëª… : chat_server4.c
- ê¸°  ëŠ¥ : ì±„íŒ…ì„œë²„, chat_server3 + /to, /sleep, /wakeup, /with, /withend, /sendfile, .. ë“±ë“± ì¶”ê°€ êµ¬í˜„
- ì‚¬ìš©ë²• : chat_server4 [port]
+ ÆÄÀÏ¸í : chat_server4.c
+ ±â  ´É : Ã¤ÆÃ¼­¹ö, chat_server3 + /to, /sleep, /wakeup, /with, /withend, /sendfile, .. µîµî Ãß°¡ ±¸Çö
+ »ç¿ë¹ı : chat_server4 [port]
+*/
+/*
+	1:1 ´ëÈ­ ¼ö¶ôÇÒ ¶§ ÀÌ¸§À¸·ÎºÎÅÍ ÀÎµ¦½º¸¦ ¾Ë¾Æ³»¼­ userwith[i]=j; userwith[j]=i; ·Î ÁöÁ¤
+	1:1 ´ëÈ­ Á¾·áÇÒ ¶§ ÀÌ¸§À¸·ÎºÎÅÍ ÀÎµ¦½º¸¦ ¾Ë¾Æ³»¼­ userwith[i]=NULL; userwith[j]=NULL; ·Î ÁöÁ¤
 */
 #ifdef _WIN32
 #include <winsock.h>
@@ -34,35 +38,40 @@ void init_winsock()
 	WORD sversion;
 	u_long iMode = 1;
 
-	// winsock ì‚¬ìš©ì„ ìœ„í•´ í•„ìˆ˜ì ì„
+	// winsock »ç¿ëÀ» À§ÇØ ÇÊ¼öÀûÀÓ
 	signal(SIGINT, exit_callback);
 	sversion = MAKEWORD(1, 1);
 	WSAStartup(sversion, &wsadata);
 }
 #endif
 
-#define MAXCLIENTS 64		// ìµœëŒ€ ì±„íŒ… ì°¸ê°€ì ìˆ˜
-#define EXIT	"exit"		// ì±„íŒ… ì¢…ë£Œ ë¬¸ìì—´
-int maxfdp;              	// select() ì—ì„œ ê°ì‹œí•´ì•¼í•  # of socket ë³€ìˆ˜ getmax() return ê°’ + 1
-int getmax(int);			// ìµœëŒ€ ì†Œì¼“ë²ˆí˜¸ ê³„ì‚°
-int num_chat = 0;         	// ì±„íŒ… ì°¸ê°€ì ìˆ˜
-int client_fds[MAXCLIENTS];	// ì±„íŒ…ì— ì°¸ê°€ì ì†Œì¼“ë²ˆí˜¸ ëª©ë¡
-void RemoveClient(int);		// ì±„íŒ… íƒˆí‡´ ì²˜ë¦¬ í•¨ìˆ˜
+#define MAXCLIENTS 64		// ÃÖ´ë Ã¤ÆÃ Âü°¡ÀÚ ¼ö
+#define EXIT	"exit"		// Ã¤ÆÃ Á¾·á ¹®ÀÚ¿­
+int maxfdp;              	// select() ¿¡¼­ °¨½ÃÇØ¾ßÇÒ # of socket º¯¼ö getmax() return °ª + 1
+int getmax(int);			// ÃÖ´ë ¼ÒÄÏ¹øÈ£ °è»ê
+int num_chat = 0;         	// Ã¤ÆÃ Âü°¡ÀÚ ¼ö
+int client_fds[MAXCLIENTS];	// Ã¤ÆÃ¿¡ Âü°¡ÀÚ ¼ÒÄÏ¹øÈ£ ¸ñ·Ï
+void RemoveClient(int);		// Ã¤ÆÃ Å»Åğ Ã³¸® ÇÔ¼ö
 
 #define BUF_LEN	128
 #define CHAT_SERVER "0.0.0.0"
 #define CHAT_PORT "30000"
-char userlist[MAXCLIENTS][BUF_LEN]; // user name ë³´ê´€ìš©
-int usersleep[MAXCLIENTS] = { 0 }; // sleep ìƒíƒœì¸ì§€ ìƒíƒœ ë³´ê´€
-int userwith[MAXCLIENTS] = { 0 };	// 1:1 ì±„íŒ… ì—°ê²° ì •ë³´ ë³´ê´€
+char userlist[MAXCLIENTS][BUF_LEN]; // user name º¸°ü¿ë
+int usersleep[MAXCLIENTS] = { 0 }; // sleep »óÅÂÀÎÁö »óÅÂ º¸°ü
+int userwith[MAXCLIENTS];	// 1:1 Ã¤ÆÃ ¿¬°á Á¤º¸ º¸°ü
 int k = -1;
 
-#define CHAT_CMD_LOGIN		"/login"	// connectí•˜ë©´ user name ì „ì†¡ "/login atom"
-#define CHAT_CMD_LIST		"/list"		// userlist ìš”ì²­
-#define CHAT_CMD_EXIT		"/exit"		// ì¢…ë£Œ
-#define CHAT_CMD_TO			"/to"		// ê·“ì†ë§ "/to atom Hi there.."
-#define CHAT_CMD_SLEEP		"/sleep"	// ëŒ€ê¸°ëª¨ë“œ(ë¶€ì¬ì¤‘) ì„¤ì •
-#define CHAT_CMD_WAKEUP		"/wakeup"	// wakeup ë˜ëŠ” message ì „ì†¡í•˜ë©´ ìë™ wakeup
+#define CHAT_CMD_LOGIN		"/login"	// connectÇÏ¸é user name Àü¼Û "/login atom"
+#define CHAT_CMD_LIST		"/list"		// userlist ¿äÃ»
+#define CHAT_CMD_EXIT		"/exit"		// Á¾·á
+#define CHAT_CMD_TO			"/to"		// ±Ó¼Ó¸» "/to atom Hi there.."
+#define CHAT_CMD_SLEEP		"/sleep"	// ´ë±â¸ğµå(ºÎÀçÁß) ¼³Á¤
+#define CHAT_CMD_WAKEUP		"/wakeup"	// wakeup ¶Ç´Â message Àü¼ÛÇÏ¸é ÀÚµ¿ wakeup
+#define CHAT_CMD_WITH		"/with"		// /with nickname , nickname°ú 1:1 Ã¤ÆÃ ¸ğµå ½ÃÀÛ
+#define CHAT_CMD_WITH_YES	"/withyes"		// 1:1 ´ëÈ­ Çã¶ô [user2] /withyes user1
+#define CHAT_CMD_WITH_NO	"/withno"		// 1:1 ´ëÈ­ °ÅºÎ [user2] /withno user1
+#define CHAT_CMD_WITH_END	"/end"		// 1:1 Ã¤ÆÃ Á¾·á [user1] /end or [user2] /end
+#define CHAT_CMD_FILESEND	"/filesend"	// /filesend nickname data.txt ÆÄÀÏ Àü¼Û
 
 int main(int argc, char* argv[]) {
 	char buf[BUF_LEN], buf1[BUF_LEN], buf2[BUF_LEN], buf3[BUF_LEN];
@@ -71,17 +80,20 @@ int main(int argc, char* argv[]) {
 	int server_fd, client_fd, client_len;
 	unsigned int set = 1;
 	char* ip_addr = CHAT_SERVER, * port_no = CHAT_PORT;
-	fd_set  read_fds;     // ì½ê¸°ë¥¼ ê°ì§€í•  ì†Œì¼“ë²ˆí˜¸ êµ¬ì¡°ì²´ server_fd ì™€ client_fds[] ë¥¼ ì„¤ì •í•œë‹¤.
+	fd_set  read_fds;     // ÀĞ±â¸¦ °¨ÁöÇÒ ¼ÒÄÏ¹øÈ£ ±¸Á¶Ã¼ server_fd ¿Í client_fds[] ¸¦ ¼³Á¤ÇÑ´Ù.
 	struct sockaddr_in  client_addr, server_addr;
 	int client_error[MAXCLIENTS];
 
+	for (j = 0; j < BUF_LEN; j++) {
+		userwith[j] = -1;
+	}
 #ifdef WIN32
 	printf("Windows : ");
 	init_winsock();
 #else
 	printf("Linux : ");
 #endif
-	/* ì†Œì¼“ ìƒì„± */
+	/* ¼ÒÄÏ »ı¼º */
 	if ((server_fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		printf("Server: Can't open stream socket.");
 		exit(0);
@@ -90,13 +102,13 @@ int main(int argc, char* argv[]) {
 	main_socket = server_fd;
 #endif
 
-	printf("chat_server4 waiting connection..\n");
+	printf("chat_server5 waiting connection..\n");
 	printf("server_fd = %d\n", server_fd);
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&set, sizeof(set));
 
-	/* server_addrì„ '\0'ìœ¼ë¡œ ì´ˆê¸°í™” */
+	/* server_addrÀ» '\0'À¸·Î ÃÊ±âÈ­ */
 	memset((char*)&server_addr, 0, sizeof(server_addr));
-	/* server_addr ì„¸íŒ… */
+	/* server_addr ¼¼ÆÃ */
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	server_addr.sin_port = htons(atoi(port_no));
@@ -105,22 +117,22 @@ int main(int argc, char* argv[]) {
 		printf("Server: Can't bind local address.\n");
 		exit(0);
 	}
-	/* í´ë¼ì´ì–¸íŠ¸ë¡œë¶€í„° ì—°ê²°ìš”ì²­ì„ ê¸°ë‹¤ë¦¼ */
+	/* Å¬¶óÀÌ¾ğÆ®·ÎºÎÅÍ ¿¬°á¿äÃ»À» ±â´Ù¸² */
 	listen(server_fd, 5);
 
 	while (1) {
-		FD_ZERO(&read_fds); // ë³€ìˆ˜ ì´ˆê¸°í™”
-		FD_SET(server_fd, &read_fds); // accept() ëŒ€ìƒ ì†Œì¼“ ì„¤ì •
-		for (i = 0; i < num_chat; i++) // ì±„íŒ…ì— ì°¸ê°€ì¤‘ì´ ëª¨ë“  client ì†Œì¼“ì„ reac() ëŒ€ìƒ ì¶”ê°€
+		FD_ZERO(&read_fds); // º¯¼ö ÃÊ±âÈ­
+		FD_SET(server_fd, &read_fds); // accept() ´ë»ó ¼ÒÄÏ ¼³Á¤
+		for (i = 0; i < num_chat; i++) // Ã¤ÆÃ¿¡ Âü°¡ÁßÀÌ ¸ğµç client ¼ÒÄÏÀ» reac() ´ë»ó Ãß°¡
 			FD_SET(client_fds[i], &read_fds);
-		maxfdp = getmax(server_fd) + 1;     // ê°ì‹œëŒ€ìƒ ì†Œì¼“ì˜ ìˆ˜ë¥¼ ê³„ì‚°
+		maxfdp = getmax(server_fd) + 1;     // °¨½Ã´ë»ó ¼ÒÄÏÀÇ ¼ö¸¦ °è»ê
 		if (select(maxfdp, &read_fds, (fd_set*)0, (fd_set*)0, (struct timeval*)0) <= 0) {
 			printf("select error <= 0 \n");
 			exit(0);
 		}
-		// ì´ˆê¸° ì†Œì¼“ ì¦‰, server_fd ì— ë³€í™”ê°€ ìˆëŠ”ì§€ ê²€ì‚¬
+		// ÃÊ±â ¼ÒÄÏ Áï, server_fd ¿¡ º¯È­°¡ ÀÖ´ÂÁö °Ë»ç
 		if (FD_ISSET(server_fd, &read_fds)) {
-			// ë³€í™”ê°€ ìˆë‹¤ --> client ê°€ connectë¡œ ì—°ê²° ìš”ì²­ì„ í•œ ê²ƒ
+			// º¯È­°¡ ÀÖ´Ù --> client °¡ connect·Î ¿¬°á ¿äÃ»À» ÇÑ °Í
 			client_len = sizeof(client_addr);
 			client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
 			if (client_fd == -1) {
@@ -130,20 +142,20 @@ int main(int argc, char* argv[]) {
 				printf("Client connected from %s:%d\n", inet_ntoa(client_addr.sin_addr),
 					ntohs(client_addr.sin_port));
 				printf("client_fd = %d\n", client_fd);
-				/* ì±„íŒ… í´ë¼ì´ì–¸íŠ¸ ëª©ë¡ì— ì¶”ê°€ */
-				printf("client[%d] ì…ì¥. í˜„ì¬ ì°¸ê°€ì ìˆ˜ = %d\n", num_chat, num_chat + 1);
+				/* Ã¤ÆÃ Å¬¶óÀÌ¾ğÆ® ¸ñ·Ï¿¡ Ãß°¡ */
+				printf("client[%d] ÀÔÀå. ÇöÀç Âü°¡ÀÚ ¼ö = %d\n", num_chat, num_chat + 1);
 				client_fds[num_chat++] = client_fd;
 			}
 		}
 
 		memset(client_error, 0, sizeof(client_error));
-		/* í´ë¼ì´ì–¸íŠ¸ê°€ ë³´ë‚¸ ë©”ì‹œì§€ë¥¼ ëª¨ë“  í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ë°©ì†¡ */
+		/* Å¬¶óÀÌ¾ğÆ®°¡ º¸³½ ¸Ş½ÃÁö¸¦ ¸ğµç Å¬¶óÀÌ¾ğÆ®¿¡°Ô ¹æ¼Û */
 		for (i = 0; i < num_chat; i++) {
-			// ê°ê°ì˜ clientë“¤ì˜ I/O ë³€í™”ê°€ ìˆëŠ”ì§€.
+			// °¢°¢ÀÇ clientµéÀÇ I/O º¯È­°¡ ÀÖ´ÂÁö.
 			if (FD_ISSET(client_fds[i], &read_fds)) {
-				// Read One ë˜ëŠ” client ë¹„ì •ìƒ ì¢…ë£Œ í™•ì¸
+				// Read One ¶Ç´Â client ºñÁ¤»ó Á¾·á È®ÀÎ
 				if ((n = recv(client_fds[i], buf, BUF_LEN, 0)) <= 0) {
-					// client ê°€ ë¹„ ì •ìƒ ì¢…ë£Œí•œ ê²½ìš°
+					// client °¡ ºñ Á¤»ó Á¾·áÇÑ °æ¿ì
 					printf("recv error for client[%d]\n", i);
 					client_error[i] = 1;
 					continue;
@@ -152,19 +164,19 @@ int main(int argc, char* argv[]) {
 				// "/login username" --> buf1 = /login, buf2 = username
 				// "/list" --> buf1 = /list
 				// "[username] message .." buf1 = [username], buf2 = message ...
-				sscanf(buf, "%s", buf1); // ì²˜ìŒ ë¬¸ìì—´ ë¶„ë¦¬ strtok() ì‚¬ìš©í•˜ì§€ ì•ŠëŠ”ë‹¤.
-				n = strlen(buf1); // "/login username" or "[username] Hello" ì—ì„œ /login ë‚˜ [username] ë§Œ ë¶„ë¦¬
-				strncpy(buf2, buf + n + 1, BUF_LEN - (n + 1)); // username ë˜ëŠ” ë©”ì‹œì§€ ë¶„ë¦¬
+				sscanf(buf, "%s", buf1); // Ã³À½ ¹®ÀÚ¿­ ºĞ¸® strtok() »ç¿ëÇÏÁö ¾Ê´Â´Ù.
+				n = strlen(buf1); // "/login username" or "[username] Hello" ¿¡¼­ /login ³ª [username] ¸¸ ºĞ¸®
+				strncpy(buf2, buf + n + 1, BUF_LEN - (n + 1)); // username ¶Ç´Â ¸Ş½ÃÁö ºĞ¸®
 				sscanf(buf2, "%s", buf2);
 				strncpy(buf3, buf + n + strlen(buf2) + 2, BUF_LEN - (n + 1));
 
-				/* ë¡œê·¸ì¸ */
+				/* ·Î±×ÀÎ */
 				if (strncmp(buf1, CHAT_CMD_LOGIN, strlen(CHAT_CMD_LOGIN)) == 0) { // "/login"
-					strcpy(userlist[i], buf2); // username ë³´ê´€
+					strcpy(userlist[i], buf2); // username º¸°ü
 					printf("\nuserlist[%d] = %s\n", i, userlist[i]);
 					for (j = 0; j < num_chat; j++) {
-						if (j != i) {	// ë³¸ì¸ ì œì™¸ ë‹¤ë¥¸ ì‚¬ìš©ìì—ê²Œ ì…ì¥ì„ ì•Œë¦°ë‹¤.
-							sprintf(buf, "[%s]ë‹˜ì´ ì…ì¥í•˜ì˜€ìŠµë‹ˆë‹¤.\n", userlist[i]);
+						if (j != i) {	// º»ÀÎ Á¦¿Ü ´Ù¸¥ »ç¿ëÀÚ¿¡°Ô ÀÔÀåÀ» ¾Ë¸°´Ù.
+							sprintf(buf, "[%s]´ÔÀÌ ÀÔÀåÇÏ¿´½À´Ï´Ù.\n", userlist[i]);
 							ret = send(client_fds[j], buf, BUF_LEN, 0);
 							if (ret <= 0) {
 								printf("send error for client[%d]\n", j);
@@ -174,7 +186,7 @@ int main(int argc, char* argv[]) {
 					}
 					continue;
 				}
-				/* ì°¸ì—¬ì ë¦¬ìŠ¤íŠ¸ */
+				/* Âü¿©ÀÚ ¸®½ºÆ® */
 				if (strncmp(buf2, CHAT_CMD_LIST, strlen(CHAT_CMD_LIST)) == 0) { // "/list"
 					printf("Sending user list to client[%d] %s\n", i, userlist[i]);
 					sprintf(buf, "User List\nNo\tname\tstatus\n-----------------------\n");
@@ -199,17 +211,17 @@ int main(int argc, char* argv[]) {
 					}
 					continue;
 				}
-				/* ê·“ì†ë§ ê¸°ëŠ¥ */
+				/* ±Ó¼Ó¸» ±â´É */
 				if (strncmp(buf2, CHAT_CMD_TO, strlen(CHAT_CMD_TO)) == 0) {	// "/to"
 					char username[BUF_LEN], to[BUF_LEN], to_user[BUF_LEN], msg[BUF_LEN];
 					sscanf(buf, "%s %s %s", username, to, to_user);
 					strcpy(msg, buf + strlen(username) + strlen(to) + strlen(to_user) + 3);
-					printf("[ê·“ì†ë§] from %s to %s : %s", username, to_user, msg);
-					// ê·“ì†ë§ ì „ì†¡
+					printf("[±Ó¼Ó¸»] from %s to %s : %s", username, to_user, msg);
+					// ±Ó¼Ó¸» Àü¼Û
 					for (j = 0; j < MAXCLIENTS; j++) {
-						// userê°€ sleepì´ë©´ ì–´ë–¤ ë©”ì‹œì§€ë„ ìˆ˜ì‹ í•˜ì§€ ì•ŠëŠ”ë‹¤.
+						// user°¡ sleepÀÌ¸é ¾î¶² ¸Ş½ÃÁöµµ ¼ö½ÅÇÏÁö ¾Ê´Â´Ù.
 						if (strcmp(userlist[j], to_user) == 0 && usersleep[j] != 1) {
-							sprintf(buf2, "[ê·“ì†ë§] %s %s", username, msg);
+							sprintf(buf2, "[±Ó¼Ó¸»] %s %s", username, msg);
 							if (send(client_fds[j], buf, BUF_LEN, 0) < 0) {
 								printf("send error for client[%d]\n", j);
 								client_error[j] = 1;
@@ -219,36 +231,127 @@ int main(int argc, char* argv[]) {
 					}
 					continue;
 				}
-				/* ë¶€ì¬ì¤‘ */
+				/* ºÎÀçÁß */
 				if (strncmp(buf2, CHAT_CMD_SLEEP, strlen(CHAT_CMD_SLEEP)) == 0) {	// "/sleep"
 					usersleep[i] = 1;
 					continue;
 				}
-				/* ê¹¨ì–´ë‚¨ */
+				/* ±ú¾î³² */
 				if (strncmp(buf2, CHAT_CMD_WAKEUP, strlen(CHAT_CMD_WAKEUP)) == 0) {	// "/wakeup"
 					usersleep[i] = 0;
 					continue;
 				}
-				/* ì±„íŒ… ì¢…ë£Œ */
+				/* 1:1 Ã¤ÆÃ¸ğµå ¼ö¶ô */
+				if (strncmp(buf2, CHAT_CMD_WITH_YES, strlen(CHAT_CMD_WITH_YES)) == 0) {
+					for (j = 0; j < num_chat; j++) {
+						if (strncmp(buf3, userlist[j], strlen(userlist[j])) == 0) {
+							k = j;
+							break;
+						}
+					}
+					userwith[i] = k;
+					userwith[k] = i;
+					printf("%d:%d %d:%d\n", k, userwith[i], i, userwith[k]);
+					sprintf(buf, "[%s]¿Í 1:1 ´ëÈ­ ½ÃÀÛ\n", userlist[userwith[k]]);
+					if (send(client_fds[userwith[i]], buf, BUF_LEN, 0) < 0) {
+						printf("client[%d] send error.", i);
+						client_error[i] = 1;
+						continue;
+					}
+					sprintf(buf, "[%s]¿Í 1:1 ´ëÈ­ ½ÃÀÛ\n", userlist[userwith[i]]);
+					if (send(client_fds[userwith[k]], buf, BUF_LEN, 0) < 0) {
+						printf("client[%d] send error.", i);
+						client_error[k] = 1;
+						continue;
+					}
+					break;
+				}
+				/* 1:1 Ã¤ÆÃ¸ğµå °ÅºÎ */
+				if (strncmp(buf2, CHAT_CMD_WITH_NO, strlen(CHAT_CMD_WITH_NO)) == 0) {
+					for (j = 0; j < num_chat; j++) {
+						if (strncmp(buf3, userlist[j], strlen(userlist[j])) == 0) {
+							sprintf(buf, "[%s]´ÔÀÌ 1:1 ´ëÈ­¸¦ °ÅºÎÇß½À´Ï´Ù.\n", userlist[i]);
+							if (send(client_fds[j], buf, BUF_LEN, 0) < 0) {
+								printf("client[%d] send error.", i);
+								client_error[i] = 1;
+								continue;
+							}
+							break;
+						}
+					}
+					continue;
+				}
+				/* 1:1 Ã¤ÆÃ¸ğµå ¿äÃ» */
+				if (strncmp(buf2, CHAT_CMD_WITH, strlen(CHAT_CMD_WITH)) == 0) {
+					char username[BUF_LEN], with[BUF_LEN], to_user[BUF_LEN];
+					sscanf(buf, "%s %s %s", username, with, to_user);
+					for (j = 0; j < MAXCLIENTS; j++) {	
+						// user°¡ sleepÀÌ¸é ¾î¶² ¸Ş½ÃÁöµµ ¼ö½ÅÇÏÁö ¾Ê´Â´Ù.
+						if (strcmp(userlist[j], to_user) == 0 && usersleep[j] != 1) {
+							sprintf(buf2, "/with %s", userlist[i]);
+							n = send(client_fds[j], buf2, BUF_LEN, 0);
+							if (n < 0) {
+								printf("send error for client[%d]\n", j);
+								client_error[j] = 1;
+								break;
+							}
+							printf("sending %d to client[%d] : %s\n", n, j, buf2);
+							break;
+						}
+						continue;
+					}
+					continue;
+				}
+				/* 1:1 Ã¤ÆÃ¸ğµå Á¾·á */
+				if (strncmp(buf2, CHAT_CMD_WITH_END, strlen(CHAT_CMD_WITH_END)) == 0) {
+					sprintf(buf, "[%s]´Ô°ú 1:1 ´ëÈ­¸¦ Á¾·áÇÕ´Ï´Ù.\n", userlist[i]);
+					if (send(client_fds[userwith[i]], buf, BUF_LEN, 0) < 0) {
+						printf("client[%d] send error.", i);
+						client_error[i] = 1;
+						continue;
+					}
+					sprintf(buf, "[%s]´Ô°ú 1:1 ´ëÈ­¸¦ Á¾·áÇÕ´Ï´Ù.\n", userlist[userwith[i]]);
+					if (send(client_fds[i], buf, BUF_LEN, 0) < 0) {
+						printf("client[%d] send error.", i);
+						client_error[k] = 1;
+						continue;
+					}
+					userwith[userwith[i]] = -1;
+					userwith[i] = -1;
+					break;
+				}
+				/* Ã¤ÆÃ Á¾·á */
 				if (strncmp(buf2, CHAT_CMD_EXIT, strlen(CHAT_CMD_EXIT)) == 0) { // "/exit"
 					RemoveClient(i);
 					continue;
 				}
 
-				/* ëª¨ë“  ì±„íŒ… ì°¸ê°€ìì—ê²Œ ë©”ì‹œì§€ ë°©ì†¡ */
-				usersleep[i] = 0;	// messageê°€ ìˆìœ¼ë©´ ë¬´ì¡°ê±´ ê¹¨ì–´ë‚œë‹¤.
-				for (j = 0; j < num_chat; j++) {
-					if (usersleep[j] != 1) {	// userê°€ sleepì´ë©´ ì–´ë–¤ ë©”ì‹œì§€ë„ ìˆ˜ì‹ í•˜ì§€ ì•ŠëŠ”ë‹¤.
-						ret = send(client_fds[j], buf, BUF_LEN, 0);
+				usersleep[i] = 0;	// message°¡ ÀÖÀ¸¸é ¹«Á¶°Ç ±ú¾î³­´Ù.
+
+				/* ¸ğµç Ã¤ÆÃ Âü°¡ÀÚ¿¡°Ô ¸Ş½ÃÁö ¹æ¼Û */
+				if (userwith[i] == -1) {
+					for (j = 0; j < num_chat; j++) {
+						if (usersleep[j] != 1 && userwith[j] == -1) {	// user°¡ sleepÀÌ¸é ¾î¶² ¸Ş½ÃÁöµµ ¼ö½ÅÇÏÁö ¾Ê´Â´Ù.
+							ret = send(client_fds[j], buf, BUF_LEN, 0);
+							if (ret <= 0) {
+								printf("send error for client[%d]\n", j);
+								client_error[j] = 1;
+							}
+						}
+					}
+				}
+				else {
+					if (usersleep[userwith[i]] != 1) {	// user°¡ sleepÀÌ¸é ¾î¶² ¸Ş½ÃÁöµµ ¼ö½ÅÇÏÁö ¾Ê´Â´Ù.
+						ret = send(client_fds[userwith[i]], buf, BUF_LEN, 0);
 						if (ret <= 0) {
-							printf("send error for client[%d]\n", j);
-							client_error[j] = 1;
+							printf("send error for client[%d]\n", i);
+							client_error[i] = 1;
 						}
 					}
 				}
 			}
 		}
-		// ì˜¤ë¥˜ê°€ ë‚œ Clientë“¤ì„ ë’¤ì—ì„œ ì•ìœ¼ë¡œ ê°€ë©´ì„œ ì œê±°í•œë‹¤.
+		// ¿À·ù°¡ ³­ ClientµéÀ» µÚ¿¡¼­ ¾ÕÀ¸·Î °¡¸é¼­ Á¦°ÅÇÑ´Ù.
 		for (i = num_chat - 1; i >= 0; i--) {
 			if (client_error[i])
 				RemoveClient(i);
@@ -256,32 +359,32 @@ int main(int argc, char* argv[]) {
 	}
 }
 
-/* ì±„íŒ… íƒˆí‡´ ì²˜ë¦¬ */
+/* Ã¤ÆÃ Å»Åğ Ã³¸® */
 void RemoveClient(int i) {
 #ifdef WIN32
 	closesocket(client_fds[i]);
 #else
 	close(client_fds[i]);
 #endif
-	// ë§ˆì§€ë§‰ clientë¥¼ ì‚­ì œëœ ìë¦¬ë¡œ ì´ë™ (í•œì¹¸ì”© ë‚´ë¦´ í•„ìš”ê°€ ì—†ë‹¤)
-	printf("client[%d] %s í‡´ì¥. í˜„ì¬ ì°¸ê°€ì ìˆ˜ = %d\n", i, userlist[i], num_chat - 1);
+	// ¸¶Áö¸· client¸¦ »èÁ¦µÈ ÀÚ¸®·Î ÀÌµ¿ (ÇÑÄ­¾¿ ³»¸± ÇÊ¿ä°¡ ¾ø´Ù)
+	printf("client[%d] %s ÅğÀå. ÇöÀç Âü°¡ÀÚ ¼ö = %d\n", i, userlist[i], num_chat - 1);
 	for (int j = 0; j < num_chat; j++) {
 		char buf[BUF_LEN];
-		if (j != i) {	// ë³¸ì¸ ì œì™¸ ë‹¤ë¥¸ ì‚¬ìš©ìì—ê²Œ í‡´ì¥ì„ ì•Œë¦°ë‹¤.
-			sprintf(buf, "[%s]ë‹˜ì´ í‡´ì¥í•˜ì˜€ìŠµë‹ˆë‹¤.\n", userlist[i]);
+		if (j != i) {	// º»ÀÎ Á¦¿Ü ´Ù¸¥ »ç¿ëÀÚ¿¡°Ô ÅğÀåÀ» ¾Ë¸°´Ù.
+			sprintf(buf, "[%s]´ÔÀÌ ÅğÀåÇÏ¿´½À´Ï´Ù.\n", userlist[i]);
 			send(client_fds[j], buf, BUF_LEN, 0);
 		}
 	}
 	if (i != num_chat - 1) {
-		client_fds[i] = client_fds[num_chat - 1];	// socket ì •ë³´
+		client_fds[i] = client_fds[num_chat - 1];	// socket Á¤º¸
 		strcpy(userlist[i], userlist[num_chat - 1]);	// username
-		usersleep[i] = usersleep[num_chat - 1];	// sleep ìƒíƒœ
+		usersleep[i] = usersleep[num_chat - 1];	// sleep »óÅÂ
 	}
 	num_chat--;
 }
 
-// client_fds[] ë‚´ì˜ ìµœëŒ€ ì†Œì¼“ë²ˆí˜¸ í™•ì¸
-// select(maxfds, ..) ì—ì„œ maxfds = getmax(server_fd) + 1
+// client_fds[] ³»ÀÇ ÃÖ´ë ¼ÒÄÏ¹øÈ£ È®ÀÎ
+// select(maxfds, ..) ¿¡¼­ maxfds = getmax(server_fd) + 1
 int getmax(int k) {
 	int max = k;
 	int r;
