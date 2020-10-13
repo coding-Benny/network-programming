@@ -1,5 +1,5 @@
 /*
-파일명 : chat_client4.c
+파일명 : chat_client6.c
 기  능 : 채팅 클라이언트, username 사용, /login, /list, /exit /sleep /wakeup /to 처리, chat_clien3와 동일.
 사용법 : chat_client4 [host] [port]
 네트워크와 키보드 동시 처리 방법
@@ -56,15 +56,23 @@ void init_winsock()
 #define CHAT_CMD_WITH_YES	"/withyes"	// 1:1 대화 허락 [user2] /withyes user1
 #define CHAT_CMD_WITH_NO	"/withno"	// 1:1 대화 거부 [user2] /withno user1
 #define CHAT_CMD_WITH_END	"/end"		// 1:1 채팅 종료 [user1] /end or [user2] /end
+#define CHAT_CMD_FILE_SEND	"/filesend"		// [user1] /filesend user2 data.txt 파일 전송 요청
+#define CHAT_CMD_FILE_YES	"/fileyes"		// [user2] /fileyes user1 파일 전송 허락
+#define	CHAT_CMD_FILE_NO	"/fileno"		// [user2] /fileno user1 파일 수신 거부
+#define CHAT_CMD_FILE_NAME	"/filename"		// [user2] /filename data.txt 765 파일 정보 전달
+#define CHAT_CMD_FILE_DATA	"/filedata"		// [user1] /filedata data...
+#define CHAT_CMD_FILE_END	"/fileend"		// [user1] /fileend 파일전송 끝
 
 char username[BUF_LEN]; // user name
 void read_key_send(int s, char* buf, char* buf2); // key입력후 보내는 code (Linux/Windows공용)
 
 int main(int argc, char* argv[]) {
 	char buf1[BUF_LEN + 1], buf2[BUF_LEN + 1], buf3[BUF_LEN + 1];
-	int s, n, len_in, len_out;
+	char res[BUF_LEN], from_user[BUF_LEN], filename[BUF_LEN];
+	int s, n, len_in, len_out, filesize = 0;
 	struct sockaddr_in server_addr;
 	char* ip_addr = CHAT_SERVER, * port_no = CHAT_PORT;
+	FILE* fp;
 	struct timeval tm;
 	tm.tv_sec = 0;
 	tm.tv_usec = 1000;
@@ -73,7 +81,7 @@ int main(int argc, char* argv[]) {
 		ip_addr = argv[1];
 		port_no = argv[2];
 	}
-	printf("chat_client4 running.\n");
+	printf("chat_client6 running.\n");
 	printf("Enter user name : ");
 	scanf("%s", username); getchar(); // \n제거
 
@@ -119,13 +127,13 @@ int main(int argc, char* argv[]) {
 	u_long iMode = 1;
 	ioctlsocket(s, FIONBIO, &iMode); // 소켓을 non-blocking 으로 만든다.
 	int maxfdp1;
+
 	while (1) {
 		// Non-blocking read이므로 데이터가 앖으면 기다리지 않고 0으로 return
 		n = recv(s, buf2, BUF_LEN, 0);
 		if (n > 0) { // non-blocking read
 		// network에서 읽어서 화면에 출력
 			if (strncmp(buf2, CHAT_CMD_WITH, strlen(CHAT_CMD_WITH)) == 0) {
-				char res[BUF_LEN];
 				strncpy(buf3, buf2 + 6, BUF_LEN - (strlen(buf2) + 6));
 				while (1) {
 					printf("[%s]님이 1:1 대화를 요청했습니다.(y/n)? ", buf3);
@@ -146,9 +154,117 @@ int main(int argc, char* argv[]) {
 					else
 						break;
 				}
+				continue;
 			}
-			else
-				printf("%s", buf2);
+			if (strncmp(buf2, CHAT_CMD_FILE_SEND, strlen(CHAT_CMD_FILE_SEND)) == 0) {
+				char filesend[BUF_LEN];
+				sscanf(buf2, "%s %s %s", filesend, from_user, filename);
+				while (1) {
+					printf("[%s]님이 %s 파일을 보내려고 합니다. 수신 (y/n)? ", from_user, filename);
+					fgets(res, BUF_LEN, stdin);
+
+					if (strcmp(res, "\n") == 0)
+						continue;
+
+					if (strcmp(res, "y\n") == 0)
+						sprintf(res, "[%s] %s %s %s\n", username, CHAT_CMD_FILE_YES, from_user, filename);
+					else if (strcmp(res, "n\n") == 0)
+						sprintf(res, "[%s] %s %s\n", username, CHAT_CMD_FILE_NO, from_user);
+
+					if (send(s, res, BUF_LEN, 0) < 0) {
+						printf("send error.\n");
+						exit(0);
+					}
+					else
+						break;
+				}
+				continue;
+			}
+			if (strncmp(buf2, CHAT_CMD_FILE_NAME, strlen(CHAT_CMD_FILE_NAME)) == 0) {
+				char command[BUF_LEN], filename2[BUF_LEN];
+				sscanf(buf2, "%s %s %d", command, filename, &filesize);
+				sprintf(filename2, "[%s]%s", from_user, filename);
+				printf("[%s]님이 보내는 파일 %s %d bytes %s로 수신중...\n", from_user, filename, filesize, filename2);
+
+				if ((fp = fopen(filename2, "wb")) == NULL) {
+					printf("file open error\n");
+					exit(0);
+				}
+				continue;
+			}
+			if (strncmp(buf2, CHAT_CMD_FILE_DATA, strlen(CHAT_CMD_FILE_DATA)) == 0) {
+				char filedata[BUF_LEN], content[BUF_LEN];
+				sscanf(buf2, "%s %[^\t\n]", filedata, content);
+
+				if (fwrite(content, n, 1, fp) <= 0) {
+					printf("fwrite error\n");
+					break;
+				}
+				continue;
+			}
+			if (strncmp(buf2, CHAT_CMD_FILE_YES, strlen(CHAT_CMD_FILE_YES)) == 0) {
+				int readsum = 0, nread = 0;
+				char fileyes[BUF_LEN], to_user[BUF_LEN];
+
+				sscanf(buf2, "%s %s %s", fileyes, to_user, filename);
+				if ((fp = fopen(filename, "rb")) == NULL) {
+					printf("Can't open file %s\n", filename);
+					exit(0);
+				}
+
+				fseek(fp, 0, 2);
+				filesize = ftell(fp);
+				rewind(fp);
+
+				printf("[%s]님에게 파일 %s %d bytes 전송중...\n", to_user, filename, filesize);
+
+				sprintf(res, "[%s] /filename %s %d\n", username, filename, filesize);
+				if (send(s, res, BUF_LEN, 0) < 0) {
+					printf("send error.\n");
+					exit(0);
+				}
+
+				// send file contents
+				readsum = 0;
+				if (filesize < BUF_LEN)
+					nread = filesize;
+				else
+					nread = BUF_LEN;
+
+				while (readsum < filesize) {
+					int n;
+					memset(buf2, 0, BUF_LEN + 1);
+					memset(buf3, 0, BUF_LEN + 1);
+					n = fread(buf3, 1, BUF_LEN - (strlen(username) + 15), fp);	// read file
+
+					if (n <= 0)	//  End of file ??
+						break;
+
+					sprintf(res, "[%s] /filedata %s\n", username, buf3);
+					if (send(s, res, BUF_LEN, 0) <= 0) {	// only read bytes are sent to the network
+						printf("send error\n");
+						break;
+					}
+					readsum += n;
+					if ((nread = (filesize - readsum)) > BUF_LEN)	// read remaining data
+						nread = BUF_LEN;
+				}
+				fclose(fp);
+				printf("%s %d bytes 전송 완료!\n", filename, filesize);
+
+				sprintf(res, "[%s] /fileend\n", username);
+				if (send(s, res, n, 0) <= 0) {	// only read bytes are sent to the network
+					printf("send error\n");
+					break;
+				}
+				continue;
+			}
+			if (strncmp(buf2, CHAT_CMD_FILE_END, strlen(CHAT_CMD_FILE_END)) == 0) {
+				printf("%s님이 보낸 파일 %s %d bytes 수신 완료!\n", from_user, filename, filesize);
+				fclose(fp);
+				continue;
+			}
+			printf("%s", buf2);
 		}
 		else if (WSAGetLastError() != WSAEWOULDBLOCK) {
 			printf("recv error\n"); // server 가 종료되었거나 네트워크 오류
