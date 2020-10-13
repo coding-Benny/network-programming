@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
 		ip_addr = argv[1];
 		port_no = argv[2];
 	}
-	printf("chat_client6 running.\n");
+	printf("chat_client6-2 running.\n");
 	printf("Enter user name : ");
 	scanf("%s", username); getchar(); // \n¡¶∞≈
 
@@ -194,6 +194,7 @@ int main(int argc, char* argv[]) {
 			}
 			if (strncmp(buf2, CHAT_CMD_FILE_DATA, strlen(CHAT_CMD_FILE_DATA)) == 0) {
 				char filedata[BUF_LEN], content[BUF_LEN];
+				memset(content, 0, BUF_LEN + 1);
 				sscanf(buf2, "%s %[^\t\n]", filedata, content);
 
 				if (fwrite(content, n, 1, fp) <= 0) {
