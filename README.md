@@ -54,3 +54,14 @@
     <li>파일 전송</li>
       <img src="https://github.com/coding-Benny/network-programming/blob/master/images/file_transfer.png" width="700" height="500">
 </details>
+  
+# NetP07
+- C로 구현했던 NetP06에서의 기능(입퇴장 알림, /exit, /list, /to, /sleep, /wakeup)들을 Java로 구현하기
+<details>
+  <summary>실행 결과</summary>
+  <ul>
+    <li>서버</li>
+      <img src="https://github.com/coding-Benny/network-programming/blob/master/images/java-chat-server.png" width="500" height="150">
+    <li>클라이언트</li>
+      <img src="https://github.com/coding-Benny/network-programming/blob/master/images/java-chat-client.png" width="500" height="150">
+</details>
