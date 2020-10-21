@@ -65,3 +65,15 @@
     <li>클라이언트</li>
       <img src="https://github.com/coding-Benny/network-programming/blob/master/images/java-chat-client.png" width="500" height="150">
 </details>
+
+# NetP-midterm
+- 레스토랑 POS Client/Server 프로그램
+- Client는 주문 모드(메뉴와 수량 정보)와 주방 모드(완료된 메뉴와 수량 정보)로 동작
+- Server는 주문 현황을 출력하고 Client에 전송<br>
+  <img src="https://github.com/coding-Benny/network-programming/blob/master/images/restaurant-pos-protocol.png" width="500" height="350">
+<details>
+  <summary>실행 결과</summary>
+      <img src="https://github.com/coding-Benny/network-programming/blob/master/images/restaurant-pos.png" width="600" height="500">
+</details>
+  
+# NetP09
