@@ -175,14 +175,30 @@ void do_keyboard(int s)
 		sscanf(buf1, "%c %d", &item, &amount);
 		item = toupper(item);
 		memset(buf2, 0, BUF_LEN);
-		if () { // item 이 X 이면 종료 처리
+		if (item == 'X') { // item 이 X 이면 종료 처리
 			// 004 전송하고 exit()
+			sprintf(buf2, "%s", "004");
+			if (send(s, buf2, BUF_LEN, 0) < 0) {
+				exit(0);
+			}
 		}
 		else { // 주문/완료 정보 전송.
 			// mode가 1이면 001 item amount를 보내고
-			printf("주문 데이터 전송\n");
-			// mode가 2이면 002 item amout를 보낸다.
-			printf("완료 데이타 전송\n");
+			if (mode == 1) {
+				sprintf(buf2, "%s %c %d\n", "001", item, amount);
+				if (send(s, buf2, BUF_LEN, 0) < 0) {
+					exit(0);
+				}
+				printf("주문 데이터 전송\n");
+			}
+			else if (mode == 2) {
+				// mode가 2이면 002 item amount를 보낸다.
+				sprintf(buf2, "%s %c %d\n", "002", item, amount);
+				if (send(s, buf2, BUF_LEN, 0) < 0) {
+					exit(0);
+				}
+				printf("완료 데이타 전송\n");
+			}
 		}
 	}
 	else {

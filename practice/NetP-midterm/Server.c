@@ -50,6 +50,8 @@ void init_winsock()
 
 #define MAXCLIENTS 64		// 최대 채팅 참가자 수
 #define EXIT	"004"		// 채팅 종료 문자열
+#define ORDER	"001"		// 주문 문자열
+#define KITCHEN	"002"		// 주방 문자열
 int maxfdp;              	// select() 에서 감시해야할 # of socket 변수 getmax() return 값 + 1
 int getmax(int);			// 최대 소켓번호 계산
 int num_chat = 0;         	// 채팅 참가자 수
@@ -69,7 +71,7 @@ void print_order()
 {
 	printf("*** 완료/주문 현황 ***\n");
 	for (int i = 0; i < N_MENU; i++) {
-		printf(""); // 화면과 같이 menus[], clear[], order[] 값을 출력..
+		printf("%s\t%d/%d\n", menus[i], clear[i], order[i]); // 화면과 같이 menus[], clear[], order[] 값을 출력..
 	}
 }
 
@@ -85,12 +87,22 @@ int send_order(int j) {
 	}
 	for (int i = 0; i < N_MENU; i++) {
 		memset(buf, 0, BUF_LEN);
-		sprintf(buf, ""); // 화면과 같이 menus[], clear[], order[] 값을 전송..
+		sprintf(buf, "%s\t%d/%d\n", menus[i], clear[i], order[i]); // 화면과 같이 menus[], clear[], order[] 값을 전송..
 		// send() 처리
 		// send()에서 오류 나면 return -1
+		ret = send(client_fds[j], buf, BUF_LEN, 0);
+		if (ret <= 0) {
+			printf("send error for client[%d]\n", j);
+			return -1;
+		}
 	}
 	memset(buf, 0, BUF_LEN);
 	sprintf(buf, "주문/완료 데이터 입력 (P)izza (C)Chiken + 수량 (예 P 1) (종료는 X)\n");
+	ret = send(client_fds[j], buf, BUF_LEN, 0);
+	if (ret <= 0) {
+		printf("send error for client[%d]\n", j);
+		return -1;
+	}
 	// send() 처리
 	// send()에서 오류나면 return -1
 	return 1;
@@ -164,10 +176,11 @@ int main(int argc, char* argv[]) {
 				printf("client_fd = %d\n", client_fd);
 				/* 채팅 클라이언트 목록에 추가 */
 				printf("client[%d] 입장. 현재 참가자 수 = %d\n", num_chat, num_chat + 1);
-				client_fds[num_chat++] = client_fd;
+				client_fds[num_chat] = client_fd;
 
 				// 접속하면 전체 주문 현황을 보내준다.
 				// send_order(); 호출
+				send_order(num_chat++);
 			}
 		}
 
@@ -186,11 +199,11 @@ int main(int argc, char* argv[]) {
 				}
 				printf("received %d from client[%d] : %s", n, i, buf);
 				// 종료문자 처리
-				if ("004") {
+				if (strncmp(buf, EXIT, strlen(EXIT)) == 0) {
 					RemoveClient(i);
 					continue;
 				}
-				else if ("001") { // 001 주문 데이터 처리
+				else if (strncmp(buf, ORDER, strlen(ORDER)) == 0) { // 001 주문 데이터 처리
 					// 주문 데이터 처리
 					// 001 P 1
 					char cmd[4];
@@ -199,15 +212,21 @@ int main(int argc, char* argv[]) {
 					sscanf(buf, "%s %c %d", cmd, &menu, &amount);
 					// P는 Pizza order[0]
 					// C는 Chicken order[1] 변경
+					if (menu == 'P') {
+						order[0] += amount;
+					}
+					else if (menu == 'C') {
+						order[1] += amount;
+					}
 					print_order();
 					// 모든 참가자에게 변화된 재고 방송
-					// Wrie All]			
-					for (int j;;) {
+					// Write All	
+					for (int j = 0; j < num_chat; j++) {
 						// send_order() 사용
-						// 
+						send_order(j);
 					}
 				}
-				else if ("002") {
+				else if (strncmp(buf, KITCHEN, strlen(KITCHEN)) == 0) {
 					// 완료 데이터 처리 
 					// 002 C 1
 					char cmd[4];
@@ -216,12 +235,18 @@ int main(int argc, char* argv[]) {
 					sscanf(buf, "%s %c %d", cmd, &menu, &amount);
 					// P는 Pizza clear[0]
 					// C는 Chicken clear[1] 변경
+					if (menu == 'P') {
+						clear[0] += amount;
+					}
+					else if (menu == 'C') {
+						clear[1] += amount;
+					}
 					print_order();
 					// 모든 참가자에게 변화된 재고 방송
 					// Wrie All]			
-					for (int j;;) {
+					for (int j = 0; j < num_chat; j++) {
 						// send_order() 사용
-						// 
+						send_order(j);
 					}
 				}
 
