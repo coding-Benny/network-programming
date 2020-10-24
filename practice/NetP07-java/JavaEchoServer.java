@@ -38,14 +38,29 @@ public class JavaEchoServer {
         while (true) {
         	String msg;
         	// client 로부터 읽고
-        	msg  = dis.readUTF();
-        	System.out.println(getTime() + " received " +  msg);
+        	//msg  = dis.readUTF();
+        	//System.out.println(getTime() + " received " +  msg);
+        	
+        	byte[] b = new byte[128];	
+        	int ret;
+			ret = dis.read(b, 0, 128);
+			msg = new String(b, "euc-kr");
+			msg = msg.trim(); // 앞뒤 blank 제거
+			System.out.println(getTime() + " received " +  ret + " " + msg);
+			
      	
         	if (msg.contains("exit"))
         		break;
         	// client 에게 시간 붙여서 전송
         	msg = getTime() + " " + msg;	 
-        	dos.writeUTF(msg);
+        	//dos.writeUTF(msg);
+        	
+        	// 128 byte로 고정시키기 위함
+        	msg = String.format("%-128s", msg);
+        	byte[] bb;
+			bb = msg.getBytes("euc-kr"); // �ѱ� �ϼ��� �ڵ� ���
+			//System.out.println("sending = " + msg.length());
+			dos.write(bb,0, msg.length());
         }
         dis.close();
         dos.close();

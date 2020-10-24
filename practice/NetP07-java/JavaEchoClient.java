@@ -34,15 +34,24 @@ public class JavaEchoClient {
 	           	// keyboard에서 읽고
 	        	System.out.print("Input string : ");
 	        	buf = sc.nextLine();
-	        	dos.writeUTF(buf);
-
+	        	// dos.writeUTF(buf);
+	        	
+				byte[] bb;
+				bb = buf.getBytes("euc-kr");// 한글 완성형
+				dos.write(bb,0, bb.length);
+				
 	        	if (buf.contains("exit"))
 	        		break;
 
 	        	// server에서 수신하고
 	        	String msg;
-	        	msg = dis.readUTF();
-
+	        	//msg = dis.readUTF();
+	        	
+	        	byte[] b = new byte[128];	
+				dis.read(b, 0, 128);
+				msg = new String(b, "euc-kr");
+				//msg = msg.trim(); // 앞뒤 blank 제거
+				
 				// 화면에 출력
 	        	System.out.println(msg);
 	        }
