@@ -218,7 +218,6 @@ public class JavaChatServer extends JFrame {
 					e1.printStackTrace();
 				}
 				UserVec.removeElement(this); // 에러가 난 현재 객체를 벡터에서 지운다
-				WriteAll("[" + UserName + "]님이 퇴장하였습니다.\n");
 				AppendText("사용자 퇴장. 현재 참가자 수 " + UserVec.size());
 			}
 		}
@@ -247,43 +246,67 @@ public class JavaChatServer extends JFrame {
 					
 					String msg = new String(b, "euc-kr");
 					msg = msg.trim(); // 앞뒤 blank NULL, \n 모두 제거
-					String[] args = msg.split(" ");
+					
+					try {
+						String[] args = msg.split(" ");
 						
-					if (args[1].equals("/exit")) {
-						try {
-							dos.close();
-							dis.close();
-							client_socket.close();
-							AppendText(msg);
-							UserVec.removeElement(this); // 에러가 난 현재 객체를 벡터에서 지운다
-							WriteAll("[" + UserName + "]님이 퇴장하였습니다.\n");
-							AppendText("사용자 [" + UserName + "] 퇴장. 현재 참가자 수 " + UserVec.size());
-							break;
-						} catch (Exception ee) {
-							break;
-						} // catch문 끝
-					}
-					if (args[1].equals("/list")) {
-						WriteOne("User List\nname\tstatus\n---------------------------------\n");
-						for (int j = 0; j < UserVec.size(); j++) {
-							UserService user = (UserService) user_vc.elementAt(j);
-							String buf = String.format("%s\t%s\n", user.UserName, user.UserStatus);
-							WriteOne(buf);
+						if (args[1].equals("/exit")) {
+							try {
+								dos.close();
+								dis.close();
+								client_socket.close();
+								AppendText(msg);
+								UserVec.removeElement(this); // 에러가 난 현재 객체를 벡터에서 지운다
+								WriteAll("[" + UserName + "]님이 퇴장하였습니다.\n");
+								AppendText("사용자 [" + UserName + "] 퇴장. 현재 참가자 수 " + UserVec.size());
+								break;
+							} catch (Exception ee) {
+								break;
+							} // catch문 끝						
 						}
+						if (args[1].equals("/list")) {
+							WriteOne("User List\nname\tstatus\n---------------------------------\n");
+							for (int j = 0; j < UserVec.size(); j++) {
+								UserService user = (UserService) user_vc.elementAt(j);
+								String buf = String.format("%s\t%s\n", user.UserName, user.UserStatus);
+								WriteOne(buf);
+							}
+							AppendText(msg);
+							continue;
+						}
+						if (args[1].equals("/to")) {	// 귓속말
+							for (int j = 0; j < UserVec.size(); j++) {
+								String whisper = "";
+								String buf = "";
+								UserService user = (UserService) user_vc.elementAt(j);
+								
+								if (args[2].equals(user.UserName) && user.UserStatus.equals("O")) {
+									whisper = msg;
+									whisper = whisper.substring(args[0].length() + args[1].length() + args[2].length() + 3);
+									buf = String.format("[귓속말] [%s] %s", UserName, whisper);
+									user.WriteOne(buf);
+								}
+							}
+							AppendText(msg);
+							continue;
+						}
+						if (args[1].equals("/sleep")) {
+							UserStatus = "S";
+							AppendText(msg);
+							continue;
+						}
+						if (args[1].equals("/wakeup")) { 
+							UserStatus = "O";
+							AppendText(msg);
+							continue;
+						}
+						AppendText(msg); // server 화면에 출력
+						WriteAll(msg + "\n"); // Write All
+					} catch (ArrayIndexOutOfBoundsException e) { // sleep 상태에서 enter key치면 wakeup
+						UserStatus = "O";
 						AppendText(msg);
 						continue;
 					}
-					if (args[1].equals("/to")) {	// 귓속말
-						
-					}
-					if (args[1].equals("/sleep")) {
-
-					}
-					if (args[1].equals("/wakeup")) { 
-
-					}
-					AppendText(msg); // server 화면에 출력
-					WriteAll(msg + "\n"); // Write All
 				} catch (IOException e) {
 					AppendText("dis.read() error");
 					try {
@@ -291,6 +314,7 @@ public class JavaChatServer extends JFrame {
 						dis.close();
 						client_socket.close();
 						UserVec.removeElement(this); // 에러가 난 현재 객체를 벡터에서 지운다
+						WriteAll("[" + UserName + "]님이 퇴장하였습니다.\n");
 						AppendText("사용자 [" + UserName + "] 퇴장. 남은 참가자 수 " + UserVec.size());
 						break;
 					} catch (Exception ee) {
