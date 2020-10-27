@@ -34,10 +34,10 @@ public class JavaChatServer extends JFrame {
 	JTextArea textArea;
 	private JTextField txtPortNumber;
 
-	private ServerSocket socket; // ¼­¹ö¼ÒÄÏ
-	private Socket client_socket; // accept() ¿¡¼­ »ı¼ºµÈ client ¼ÒÄÏ
-	private Vector UserVec = new Vector(); // ¿¬°áµÈ »ç¿ëÀÚ¸¦ ÀúÀåÇÒ º¤ÅÍ
-	private static final int BUF_LEN = 128; // Windows Ã³·³ BUF_LEN À» Á¤ÀÇ
+	private ServerSocket socket; // ì„œë²„ì†Œì¼“
+	private Socket client_socket; // accept() ì—ì„œ ìƒì„±ëœ client ì†Œì¼“
+	private Vector UserVec = new Vector(); // ì—°ê²°ëœ ì‚¬ìš©ìë¥¼ ì €ì¥í•  ë²¡í„°
+	private static final int BUF_LEN = 128; // Windows ì²˜ëŸ¼ BUF_LEN ì„ ì •ì˜
 
 	/**
 	 * Launch the application.
@@ -96,8 +96,8 @@ public class JavaChatServer extends JFrame {
 				}
 				AppendText("Chat Server Running..");
 				btnServerStart.setText("Chat Server Running..");
-				btnServerStart.setEnabled(false); // ¼­¹ö¸¦ ´õÀÌ»ó ½ÇÇà½ÃÅ°Áö ¸ø ÇÏ°Ô ¸·´Â´Ù
-				txtPortNumber.setEnabled(false); // ´õÀÌ»ó Æ÷Æ®¹øÈ£ ¼öÁ¤¸ø ÇÏ°Ô ¸·´Â´Ù
+				btnServerStart.setEnabled(false); // ì„œë²„ë¥¼ ë”ì´ìƒ ì‹¤í–‰ì‹œí‚¤ì§€ ëª» í•˜ê²Œ ë§‰ëŠ”ë‹¤
+				txtPortNumber.setEnabled(false); // ë”ì´ìƒ í¬íŠ¸ë²ˆí˜¸ ìˆ˜ì •ëª» í•˜ê²Œ ë§‰ëŠ”ë‹¤
 				AcceptServer accept_server = new AcceptServer();
 				accept_server.start();
 			}
@@ -106,35 +106,35 @@ public class JavaChatServer extends JFrame {
 		contentPane.add(btnServerStart);
 	}
 
-	// »õ·Î¿î Âü°¡ÀÚ accept() ÇÏ°í user thread¸¦ »õ·Î »ı¼ºÇÑ´Ù.
+	// ìƒˆë¡œìš´ ì°¸ê°€ì accept() í•˜ê³  user threadë¥¼ ìƒˆë¡œ ìƒì„±í•œë‹¤.
 	class AcceptServer extends Thread {
 		@SuppressWarnings("unchecked")
 		public void run() {
-			while (true) { // »ç¿ëÀÚ Á¢¼ÓÀ» °è¼ÓÇØ¼­ ¹Ş±â À§ÇØ while¹®
+			while (true) { // ì‚¬ìš©ì ì ‘ì†ì„ ê³„ì†í•´ì„œ ë°›ê¸° ìœ„í•´ whileë¬¸
 				try {
 					AppendText("Waiting clients ...");
-					client_socket = socket.accept(); // accept°¡ ÀÏ¾î³ª±â Àü±îÁö´Â ¹«ÇÑ ´ë±âÁß
-					AppendText("»õ·Î¿î Âü°¡ÀÚ from " + client_socket);
-					// User ´ç ÇÏ³ª¾¿ Thread »ı¼º
+					client_socket = socket.accept(); // acceptê°€ ì¼ì–´ë‚˜ê¸° ì „ê¹Œì§€ëŠ” ë¬´í•œ ëŒ€ê¸°ì¤‘
+					AppendText("ìƒˆë¡œìš´ ì°¸ê°€ì from " + client_socket);
+					// User ë‹¹ í•˜ë‚˜ì”© Thread ìƒì„±
 					UserService new_user = new UserService(client_socket);
-					UserVec.add(new_user); // »õ·Î¿î Âü°¡ÀÚ ¹è¿­¿¡ Ãß°¡
-					AppendText("»ç¿ëÀÚ ÀÔÀå. ÇöÀç Âü°¡ÀÚ ¼ö " + UserVec.size());
-					new_user.start(); // ¸¸µç °´Ã¼ÀÇ ½º·¹µå ½ÇÇà
+					UserVec.add(new_user); // ìƒˆë¡œìš´ ì°¸ê°€ì ë°°ì—´ì— ì¶”ê°€
+					AppendText("ì‚¬ìš©ì ì…ì¥. í˜„ì¬ ì°¸ê°€ì ìˆ˜ " + UserVec.size());
+					new_user.start(); // ë§Œë“  ê°ì²´ì˜ ìŠ¤ë ˆë“œ ì‹¤í–‰
 				} catch (IOException e) {
-					AppendText("!!!! accept ¿¡·¯ ¹ß»ı... !!!!");
+					AppendText("!!!! accept ì—ëŸ¬ ë°œìƒ... !!!!");
 				}
 			}
 		}
 	}
 
 	public void AppendText(String str) {
-		// textArea.append("»ç¿ëÀÚ·ÎºÎÅÍ µé¾î¿Â ¸Ş¼¼Áö : " + str+"\n");
+		// textArea.append("ì‚¬ìš©ìë¡œë¶€í„° ë“¤ì–´ì˜¨ ë©”ì„¸ì§€ : " + str+"\n");
 		textArea.append(str + "\n");
 		textArea.setCaretPosition(textArea.getText().length());
 	}
 
-	// User ´ç »ı¼ºµÇ´Â Thread
-	// Read One ¿¡¼­ ´ë±â -> Write All
+	// User ë‹¹ ìƒì„±ë˜ëŠ” Thread
+	// Read One ì—ì„œ ëŒ€ê¸° -> Write All
 	class UserService extends Thread {
 		private InputStream is;
 		private OutputStream os;
@@ -142,11 +142,12 @@ public class JavaChatServer extends JFrame {
 		private DataOutputStream dos;
 		private Socket client_socket;
 		private Vector user_vc;
-		private String UserName = "";
+		public String UserName = "";
+		public String UserStatus = "O";
 
 		public UserService(Socket client_socket) {
 			// TODO Auto-generated constructor stub
-			// ¸Å°³º¯¼ö·Î ³Ñ¾î¿Â ÀÚ·á ÀúÀå
+			// ë§¤ê°œë³€ìˆ˜ë¡œ ë„˜ì–´ì˜¨ ìë£Œ ì €ì¥
 			this.client_socket = client_socket;
 			this.user_vc = UserVec;
 			try {
@@ -161,23 +162,27 @@ public class JavaChatServer extends JFrame {
 				String line1 = new String(b);
 				String[] msg = line1.split(" ");
 				UserName = msg[1].trim();
-				AppendText("»õ·Î¿î Âü°¡ÀÚ " + UserName + " ÀÔÀå.");
+				
+				AppendText("ìƒˆë¡œìš´ ì°¸ê°€ì " + UserName + " ì…ì¥.");
 				WriteOne("Welcome to Java chat server\n");
-				WriteOne(UserName + "´Ô È¯¿µÇÕ´Ï´Ù.\n"); // ¿¬°áµÈ »ç¿ëÀÚ¿¡°Ô Á¤»óÁ¢¼ÓÀ» ¾Ë¸²
+				WriteOne(UserName + "ë‹˜ í™˜ì˜í•©ë‹ˆë‹¤.\n"); // ì—°ê²°ëœ ì‚¬ìš©ìì—ê²Œ ì •ìƒì ‘ì†ì„ ì•Œë¦¼
+				WriteAll("[" + UserName + "]ë‹˜ì´ ì…ì¥í•˜ì˜€ìŠµë‹ˆë‹¤.\n"); // ëª¨ë“  ì°¸ê°€ìì—ê²Œ ì…ì¥ ì•Œë¦¼
 			} catch (Exception e) {
 				AppendText("userService error");
 			}
 		}
 
-		// ¸ğµç Userµé¿¡°Ô ¹æ¼Û. °¢°¢ÀÇ UserService ThreadÀÇ WriteONe() À» È£ÃâÇÑ´Ù.
+		// ëª¨ë“  Userë“¤ì—ê²Œ ë°©ì†¡. ê°ê°ì˜ UserService Threadì˜ WriteOne() ì„ í˜¸ì¶œí•œë‹¤.
 		public void WriteAll(String str) {
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
-				user.WriteOne(str);
+				if (user.UserStatus.equals("O")) {
+					user.WriteOne(str);
+				}
 			}
 		}
 
-		// Windows Ã³·³ message Á¦¿ÜÇÑ ³ª¸ÓÁö ºÎºĞÀº NULL ·Î ¸¸µé±â À§ÇÑ ÇÔ¼ö
+		// Windows ì²˜ëŸ¼ message ì œì™¸í•œ ë‚˜ë¨¸ì§€ ë¶€ë¶„ì€ NULL ë¡œ ë§Œë“¤ê¸° ìœ„í•œ í•¨ìˆ˜
 		public byte[] MakePacket(String msg) {
 			byte[] packet = new byte[BUF_LEN];
 			byte[] bb = null;
@@ -195,7 +200,7 @@ public class JavaChatServer extends JFrame {
 			return packet;
 		}
 
-		// UserService Thread°¡ ´ã´çÇÏ´Â Client ¿¡°Ô 1:1 Àü¼Û
+		// UserService Threadê°€ ë‹´ë‹¹í•˜ëŠ” Client ì—ê²Œ 1:1 ì „ì†¡
 		public void WriteOne(String msg) {
 			try {
 				// dos.writeUTF(msg);
@@ -212,13 +217,14 @@ public class JavaChatServer extends JFrame {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
-				UserVec.removeElement(this); // ¿¡·¯°¡³­ ÇöÀç °´Ã¼¸¦ º¤ÅÍ¿¡¼­ Áö¿î´Ù
-				AppendText("»ç¿ëÀÚ ÅğÀå. ÇöÀç Âü°¡ÀÚ ¼ö " + UserVec.size());
+				UserVec.removeElement(this); // ì—ëŸ¬ê°€ ë‚œ í˜„ì¬ ê°ì²´ë¥¼ ë²¡í„°ì—ì„œ ì§€ìš´ë‹¤
+				WriteAll("[" + UserName + "]ë‹˜ì´ í‡´ì¥í•˜ì˜€ìŠµë‹ˆë‹¤.\n");
+				AppendText("ì‚¬ìš©ì í‡´ì¥. í˜„ì¬ ì°¸ê°€ì ìˆ˜ " + UserVec.size());
 			}
 		}
 
 		public void run() {
-			while (true) { // »ç¿ëÀÚ Á¢¼ÓÀ» °è¼ÓÇØ¼­ ¹Ş±â À§ÇØ while¹®
+			while (true) { // ì‚¬ìš©ì ì ‘ì†ì„ ê³„ì†í•´ì„œ ë°›ê¸° ìœ„í•´ whileë¬¸
 				try {
 					// String msg = dis.readUTF();
 					byte[] b = new byte[BUF_LEN];
@@ -230,16 +236,53 @@ public class JavaChatServer extends JFrame {
 							dos.close();
 							dis.close();
 							client_socket.close();
-							UserVec.removeElement(this); // ¿¡·¯°¡³­ ÇöÀç °´Ã¼¸¦ º¤ÅÍ¿¡¼­ Áö¿î´Ù
-							AppendText("»ç¿ëÀÚ ÅğÀå. ³²Àº Âü°¡ÀÚ ¼ö " + UserVec.size());
+							UserVec.removeElement(this); // ì—ëŸ¬ê°€ ë‚œ í˜„ì¬ ê°ì²´ë¥¼ ë²¡í„°ì—ì„œ ì§€ìš´ë‹¤
+							WriteAll("[" + UserName + "]ë‹˜ì´ í‡´ì¥í•˜ì˜€ìŠµë‹ˆë‹¤.\n");
+							AppendText("ì‚¬ìš©ì [" + UserName + "] í‡´ì¥. ë‚¨ì€ ì°¸ê°€ì ìˆ˜ " + UserVec.size());
 							break;
 						} catch (Exception ee) {
 							break;
-						} // catch¹® ³¡
+						} // catchë¬¸ ë
 					}
+					
 					String msg = new String(b, "euc-kr");
-					msg = msg.trim(); // ¾ÕµÚ blank NULL, \n ¸ğµÎ Á¦°Å
-					AppendText(msg); // server È­¸é¿¡ Ãâ·Â
+					msg = msg.trim(); // ì•ë’¤ blank NULL, \n ëª¨ë‘ ì œê±°
+					String[] args = msg.split(" ");
+						
+					if (args[1].equals("/exit")) {
+						try {
+							dos.close();
+							dis.close();
+							client_socket.close();
+							AppendText(msg);
+							UserVec.removeElement(this); // ì—ëŸ¬ê°€ ë‚œ í˜„ì¬ ê°ì²´ë¥¼ ë²¡í„°ì—ì„œ ì§€ìš´ë‹¤
+							WriteAll("[" + UserName + "]ë‹˜ì´ í‡´ì¥í•˜ì˜€ìŠµë‹ˆë‹¤.\n");
+							AppendText("ì‚¬ìš©ì [" + UserName + "] í‡´ì¥. í˜„ì¬ ì°¸ê°€ì ìˆ˜ " + UserVec.size());
+							break;
+						} catch (Exception ee) {
+							break;
+						} // catchë¬¸ ë
+					}
+					if (args[1].equals("/list")) {
+						WriteOne("User List\nname\tstatus\n---------------------------------\n");
+						for (int j = 0; j < UserVec.size(); j++) {
+							UserService user = (UserService) user_vc.elementAt(j);
+							String buf = String.format("%s\t%s\n", user.UserName, user.UserStatus);
+							WriteOne(buf);
+						}
+						AppendText(msg);
+						continue;
+					}
+					if (args[1].equals("/to")) {	// ê·“ì†ë§
+						
+					}
+					if (args[1].equals("/sleep")) {
+
+					}
+					if (args[1].equals("/wakeup")) { 
+
+					}
+					AppendText(msg); // server í™”ë©´ì— ì¶œë ¥
 					WriteAll(msg + "\n"); // Write All
 				} catch (IOException e) {
 					AppendText("dis.read() error");
@@ -247,13 +290,13 @@ public class JavaChatServer extends JFrame {
 						dos.close();
 						dis.close();
 						client_socket.close();
-						UserVec.removeElement(this); // ¿¡·¯°¡³­ ÇöÀç °´Ã¼¸¦ º¤ÅÍ¿¡¼­ Áö¿î´Ù
-						AppendText("»ç¿ëÀÚ ÅğÀå. ³²Àº Âü°¡ÀÚ ¼ö " + UserVec.size());
+						UserVec.removeElement(this); // ì—ëŸ¬ê°€ ë‚œ í˜„ì¬ ê°ì²´ë¥¼ ë²¡í„°ì—ì„œ ì§€ìš´ë‹¤
+						AppendText("ì‚¬ìš©ì [" + UserName + "] í‡´ì¥. ë‚¨ì€ ì°¸ê°€ì ìˆ˜ " + UserVec.size());
 						break;
 					} catch (Exception ee) {
 						break;
-					} // catch¹® ³¡
-				} // ¹Ù±ù catch¹®³¡
+					} // catchë¬¸ ë
+				} // ë°”ê¹¥ catchë¬¸ë
 			} // while
 		} // run
 	}
