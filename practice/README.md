@@ -8,6 +8,8 @@
   4. 종료
   </ol>
   <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/wecho_protocol.png" width="500" height="400">
-- 실행 결과<br>
+<details>
+  <summary>실행 결과</summary>
   <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/wecho_screenshot2.png" width="800" height="500">
-  <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/wecho_screenshot1.png" width="800" height="500">  
+  <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/wecho_screenshot1.png" width="800" height="500">
+</details>
