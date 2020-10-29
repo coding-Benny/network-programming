@@ -1,5 +1,5 @@
 // JavaChatClientView.java
-// ½ÇÁúÀûÀÎ Ã¤ÆÃ Ã¢
+// ì‹¤ì§ˆì ì¸ ì±„íŒ… ì°½
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
@@ -30,8 +30,8 @@ public class JavaChatClientView extends JFrame {
 	private JTextField txtInput;
 	private String UserName;
 	private JButton btnSend;
-	private static final  int BUF_LEN = 128; //  Windows Ã³·³ BUF_LEN À» Á¤ÀÇ
-	private Socket socket; // ¿¬°á¼ÒÄÏ
+	private static final  int BUF_LEN = 128; //  Windows ì²˜ëŸ¼ BUF_LEN ì„ ì •ì˜
+	private Socket socket; // ì—°ê²°ì†Œì¼“
 	private InputStream is;
 	private OutputStream os;
 	private DataInputStream dis;
@@ -57,7 +57,7 @@ public class JavaChatClientView extends JFrame {
 		
 		textArea = new JTextPane();
 		textArea.setEditable(true);
-		textArea.setFont(new Font("±¼¸²Ã¼", Font.PLAIN, 14));
+		textArea.setFont(new Font("êµ´ë¦¼ì²´", Font.PLAIN, 14));
 		scrollPane.setViewportView(textArea);
 
 		txtInput = new JTextField();
@@ -70,7 +70,7 @@ public class JavaChatClientView extends JFrame {
 		contentPane.add(btnSend);
 		
 		lblUserName = new JLabel("Name");
-		lblUserName.setFont(new Font("±¼¸²", Font.PLAIN, 14));
+		lblUserName.setFont(new Font("êµ´ë¦¼ì²´", Font.PLAIN, 14));
 		lblUserName.setHorizontalAlignment(SwingConstants.CENTER);
 		lblUserName.setBounds(12, 364, 67, 40);
 		contentPane.add(lblUserName);
@@ -91,7 +91,7 @@ public class JavaChatClientView extends JFrame {
 			ListenNetwork net = new ListenNetwork();
 			net.start();
 			Myaction action = new Myaction();
-			btnSend.addActionListener(action); // ³»ºÎÅ¬·¡½º·Î ¾×¼Ç ¸®½º³Ê¸¦ »ó¼Ó¹ŞÀº Å¬·¡½º·Î
+			btnSend.addActionListener(action); // ë‚´ë¶€í´ë˜ìŠ¤ë¡œ ì•¡ì…˜ ë¦¬ìŠ¤ë„ˆë¥¼ ìƒì†ë°›ì€ í´ë˜ìŠ¤ë¡œ
 			txtInput.addActionListener(action);
 			txtInput.requestFocus();
 		} catch (NumberFormatException | IOException e) {
@@ -101,7 +101,7 @@ public class JavaChatClientView extends JFrame {
 		}
 
 	}
-	// Server Message¸¦ ¼ö½ÅÇØ¼­ È­¸é¿¡ Ç¥½Ã
+	// Server Messageë¥¼ ìˆ˜ì‹ í•´ì„œ í™”ë©´ì— í‘œì‹œ
 	class ListenNetwork extends Thread {
 		public void run() {
 			while (true) {
@@ -119,11 +119,11 @@ public class JavaChatClientView extends JFrame {
 							break;
 						} catch (Exception ee) {
 							break;
-						}// catch¹® ³¡
+						}// catchë¬¸ ë
 					}
 					String	msg = new String(b, "euc-kr");
-					msg = msg.trim(); // ¾ÕµÚ blank NULL, \n ¸ğµÎ Á¦°Å
-					AppendText(msg); // server È­¸é¿¡ Ãâ·Â
+					msg = msg.trim(); // ì•ë’¤ blank NULL, \n ëª¨ë‘ ì œê±°
+					AppendText(msg); // server í™”ë©´ì— ì¶œë ¥
 				} catch (IOException e) {
 					AppendText("dis.read() error");
 					try {
@@ -133,36 +133,36 @@ public class JavaChatClientView extends JFrame {
 						break;
 					} catch (Exception ee) {
 						break;
-					} // catch¹® ³¡
-				} // ¹Ù±ù catch¹®³¡
+					} // catchë¬¸ ë
+				} // ë°”ê¹¥ catchë¬¸ë
 				
 			}
 		}
 	}
-	// keyboard enter key Ä¡¸é ¼­¹ö·Î Àü¼Û
-	class Myaction implements ActionListener // ³»ºÎÅ¬·¡½º·Î ¾×¼Ç ÀÌº¥Æ® Ã³¸® Å¬·¡½º
+	// keyboard enter key ì¹˜ë©´ ì„œë²„ë¡œ ì „ì†¡
+	class Myaction implements ActionListener // ë‚´ë¶€í´ë˜ìŠ¤ë¡œ ì•¡ì…˜ ì´ë²¤íŠ¸ ì²˜ë¦¬ í´ë˜ìŠ¤
 	{
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			// Send buttonÀ» ´©¸£°Å³ª ¸Ş½ÃÁö ÀÔ·ÂÇÏ°í Enter key Ä¡¸é
+			// Send buttonì„ ëˆ„ë¥´ê±°ë‚˜ ë©”ì‹œì§€ ì…ë ¥í•˜ê³  Enter key ì¹˜ë©´
 			if (e.getSource() == btnSend || e.getSource() == txtInput) {
 				String msg = null;
 				msg = String.format("[%s] %s\n", UserName, txtInput.getText());
 				SendMessage(msg);
-				txtInput.setText(""); // ¸Ş¼¼Áö¸¦ º¸³»°í ³ª¸é ¸Ş¼¼Áö ¾²´ÂÃ¢À» ºñ¿î´Ù.
-				txtInput.requestFocus(); // ¸Ş¼¼Áö¸¦ º¸³»°í Ä¿¼­¸¦ ´Ù½Ã ÅØ½ºÆ® ÇÊµå·Î À§Ä¡½ÃÅ²´Ù
-				if (msg.contains("/exit")) // Á¾·á Ã³¸®
+				txtInput.setText(""); // ë©”ì„¸ì§€ë¥¼ ë³´ë‚´ê³  ë‚˜ë©´ ë©”ì„¸ì§€ ì“°ëŠ”ì°½ì„ ë¹„ìš´ë‹¤.
+				txtInput.requestFocus(); // ë©”ì„¸ì§€ë¥¼ ë³´ë‚´ê³  ì»¤ì„œë¥¼ ë‹¤ì‹œ í…ìŠ¤íŠ¸ í•„ë“œë¡œ ìœ„ì¹˜ì‹œí‚¨ë‹¤
+				if (msg.contains("/exit")) // ì¢…ë£Œ ì²˜ë¦¬
 					System.exit(0);
 			}
 		}
 	}
-	ImageIcon icon1 = new ImageIcon("src/icon1.jpg");
+	ImageIcon icon1 = new ImageIcon("src/mumy.png");
 	public void AppendIcon(ImageIcon icon) {
 		int len = textArea.getDocument().getLength();
 		textArea.setCaretPosition(len); // place caret at the end (with no selection)
 		textArea.insertIcon(icon);	
 	}
-	// È­¸é¿¡ Ãâ·Â
+	// í™”ë©´ì— ì¶œë ¥
 	public void AppendText(String msg) {
 		//textArea.append(msg + "\n");
 		AppendIcon(icon1);
@@ -171,7 +171,7 @@ public class JavaChatClientView extends JFrame {
  		textArea.replaceSelection(msg + "\n"); // there is no selection, so inserts at caret
  	}
 
-	// Windows Ã³·³ message Á¦¿ÜÇÑ ³ª¸ÓÁö ºÎºĞÀº NULL ·Î ¸¸µé±â À§ÇÑ ÇÔ¼ö
+	// Windows ì²˜ëŸ¼ message ì œì™¸í•œ ë‚˜ë¨¸ì§€ ë¶€ë¶„ì€ NULL ë¡œ ë§Œë“¤ê¸° ìœ„í•œ í•¨ìˆ˜
 	public byte[] MakePacket(String msg) {
 		byte[] packet = new byte[BUF_LEN];
 		byte[] bb = null;
@@ -190,7 +190,7 @@ public class JavaChatClientView extends JFrame {
 		return packet;
 	}
 
-	// Server¿¡°Ô networkÀ¸·Î Àü¼Û
+	// Serverì—ê²Œ networkìœ¼ë¡œ ì „ì†¡
 	public void SendMessage(String msg) {
 		try {
 			// dos.writeUTF(msg);

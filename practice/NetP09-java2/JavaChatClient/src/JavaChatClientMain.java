@@ -1,5 +1,5 @@
 // JavaChatClientMain.java
-// Java Client ½ÃÀÛimport java.awt.BorderLayout;
+// Java Client ì‹œì‘import java.awt.BorderLayout;
 
 import java.awt.EventQueue;
 
@@ -88,7 +88,7 @@ public class JavaChatClientMain extends JFrame {
 		txtIpAddress.addActionListener(action);
 		txtPortNumber.addActionListener(action);
 	}
-	class Myaction implements ActionListener // ³»ºÎÅ¬·¡½º·Î ¾×¼Ç ÀÌº¥Æ® Ã³¸® Å¬·¡½º
+	class Myaction implements ActionListener // ë‚´ë¶€í´ë˜ìŠ¤ë¡œ ì•¡ì…˜ ì´ë²¤íŠ¸ ì²˜ë¦¬ í´ë˜ìŠ¤
 	{
 		@Override
 		public void actionPerformed(ActionEvent e) {

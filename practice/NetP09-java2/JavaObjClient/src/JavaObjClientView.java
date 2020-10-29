@@ -1,11 +1,12 @@
-
-// JavaObjClientView.java ObjecStram ±â¹İ Client
-//½ÇÁúÀûÀÎ Ã¤ÆÃ Ã¢
+// JavaObjClientView.java ObjecStram ê¸°ë°˜ Client
+//ì‹¤ì§ˆì ì¸ ì±„íŒ… ì°½
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.FileDialog;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -20,9 +21,9 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
+import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -31,10 +32,11 @@ import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Image;
 import java.awt.Color;
-import javax.swing.border.BevelBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.JToggleButton;
 import javax.swing.JList;
+import javax.swing.JCheckBox;
+import javax.swing.UIManager;
 
 public class JavaObjClientView extends JFrame {
 	/**
@@ -45,8 +47,8 @@ public class JavaObjClientView extends JFrame {
 	private JTextField txtInput;
 	private String UserName;
 	private JButton btnSend;
-	private static final int BUF_LEN = 128; // Windows Ã³·³ BUF_LEN À» Á¤ÀÇ
-	private Socket socket; // ¿¬°á¼ÒÄÏ
+	private static final int BUF_LEN = 128; // Windows ì²˜ëŸ¼ BUF_LEN ì„ ì •ì˜
+	private Socket socket; // ì—°ê²°ì†Œì¼“
 	private InputStream is;
 	private OutputStream os;
 	private DataInputStream dis;
@@ -62,13 +64,14 @@ public class JavaObjClientView extends JFrame {
 	private Frame frame;
 	private FileDialog fd;
 	private JButton imgBtn;
+	private JCheckBox chckbxNewCheckBox;
 
 	/**
 	 * Create the frame.
 	 */
 	public JavaObjClientView(String username, String ip_addr, String port_no) {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 394, 630);
+		setBounds(100, 100, 391, 630);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
@@ -80,7 +83,7 @@ public class JavaObjClientView extends JFrame {
 
 		textArea = new JTextPane();
 		textArea.setEditable(true);
-		textArea.setFont(new Font("±¼¸²Ã¼", Font.PLAIN, 14));
+		textArea.setFont(new Font("êµ´ë¦¼ì²´", Font.PLAIN, 14));
 		scrollPane.setViewportView(textArea);
 
 		txtInput = new JTextField();
@@ -89,14 +92,14 @@ public class JavaObjClientView extends JFrame {
 		txtInput.setColumns(10);
 
 		btnSend = new JButton("Send");
-		btnSend.setFont(new Font("±¼¸²", Font.PLAIN, 14));
+		btnSend.setFont(new Font("êµ´ë¦¼ì²´", Font.PLAIN, 14));
 		btnSend.setBounds(295, 489, 69, 40);
 		contentPane.add(btnSend);
 
 		lblUserName = new JLabel("Name");
 		lblUserName.setBorder(new LineBorder(new Color(0, 0, 0)));
 		lblUserName.setBackground(Color.WHITE);
-		lblUserName.setFont(new Font("±¼¸²", Font.BOLD, 14));
+		lblUserName.setFont(new Font("êµ´ë¦¼ì²´", Font.BOLD, 14));
 		lblUserName.setHorizontalAlignment(SwingConstants.CENTER);
 		lblUserName.setBounds(12, 539, 62, 40);
 		contentPane.add(lblUserName);
@@ -107,21 +110,26 @@ public class JavaObjClientView extends JFrame {
 		lblUserName.setText(username);
 
 		imgBtn = new JButton("+");
-		imgBtn.setFont(new Font("±¼¸²", Font.PLAIN, 16));
+		imgBtn.setFont(new Font("êµ´ë¦¼ì²´", Font.PLAIN, 16));
 		imgBtn.setBounds(12, 489, 50, 40);
 		contentPane.add(imgBtn);
 		
-		JButton btnNewButton = new JButton("Á¾ ·á");
-		btnNewButton.setFont(new Font("±¼¸²", Font.PLAIN, 14));
-		btnNewButton.addActionListener(new ActionListener() {
+		JButton exitBtn = new JButton("ì¢…ë£Œ");
+		exitBtn.setFont(new Font("êµ´ë¦¼ì²´", Font.PLAIN, 14));
+		exitBtn.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				ChatMsg msg = new ChatMsg(UserName, "400", "Bye");
 				SendObject(msg);
 				System.exit(0);
 			}
 		});
-		btnNewButton.setBounds(295, 539, 69, 40);
-		contentPane.add(btnNewButton);
+		exitBtn.setBounds(295, 539, 69, 40);
+		contentPane.add(exitBtn);
+		
+		chckbxNewCheckBox = new JCheckBox("Sleep");
+		chckbxNewCheckBox.setFont(new Font("êµ´ë¦¼ì²´", Font.PLAIN, 14));
+		chckbxNewCheckBox.setBounds(154, 549, 62, 21);
+		contentPane.add(chckbxNewCheckBox);
 
 		try {
 			socket = new Socket(ip_addr, Integer.parseInt(port_no));
@@ -146,37 +154,37 @@ public class JavaObjClientView extends JFrame {
 			txtInput.requestFocus();
 			ImageSendAction action2 = new ImageSendAction();
 			imgBtn.addActionListener(action2);
+			StatusSelectAction action3 = new StatusSelectAction();
+			chckbxNewCheckBox.addItemListener(action3);
 
 		} catch (NumberFormatException | IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			AppendText("connect error");
 		}
-
 	}
 
-	// Server Message¸¦ ¼ö½ÅÇØ¼­ È­¸é¿¡ Ç¥½Ã
+	// Server Messageë¥¼ ìˆ˜ì‹ í•´ì„œ í™”ë©´ì— í‘œì‹œ
 	class ListenNetwork extends Thread {
 		public void run() {
 			while (true) {
 				try {
-					// String msg = dis.readUTF();
-//					byte[] b = new byte[BUF_LEN];
-//					int ret;
-//					ret = dis.read(b);
-//					if (ret < 0) {
-//						AppendText("dis.read() < 0 error");
-//						try {
-//							dos.close();
-//							dis.close();
-//							socket.close();
-//							break;
-//						} catch (Exception ee) {
-//							break;
-//						}// catch¹® ³¡
-//					}
-//					String	msg = new String(b, "euc-kr");
-//					msg = msg.trim(); // ¾ÕµÚ blank NULL, \n ¸ğµÎ Á¦°Å
+					/* // String msg = dis.readUTF();
+					byte[] b = new byte[BUF_LEN];
+					int ret;
+					ret = dis.read(b);
+					if (ret < 0) {
+						AppendText("dis.read() < 0 error");
+						try {
+							dos.close();
+							dis.close();
+							socket.close();
+							break;
+						} catch (Exception ee) {
+							break;
+						}// catchë¬¸ ë
+					}
+					String	msg = new String(b, "euc-kr");
+					msg = msg.trim(); // ì•ë’¤ blank NULL, \n ëª¨ë‘ ì œê±° */
 
 					Object obcm = null;
 					String msg = null;
@@ -184,7 +192,6 @@ public class JavaObjClientView extends JFrame {
 					try {
 						obcm = ois.readObject();
 					} catch (ClassNotFoundException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 						break;
 					}
@@ -199,7 +206,7 @@ public class JavaObjClientView extends JFrame {
 					case "200": // chat message
 						AppendText(msg);
 						break;
-					case "300": // Image Ã·ºÎ
+					case "300": // Image ì²¨ë¶€
 						AppendText("[" + cm.getId() + "]");
 						AppendImage(cm.img);
 						break;
@@ -216,26 +223,26 @@ public class JavaObjClientView extends JFrame {
 						break;
 					} catch (Exception ee) {
 						break;
-					} // catch¹® ³¡
-				} // ¹Ù±ù catch¹®³¡
+					} // catchë¬¸ ë
+				} // ë°”ê¹¥ catchë¬¸ë
 
 			}
 		}
 	}
 
-	// keyboard enter key Ä¡¸é ¼­¹ö·Î Àü¼Û
+	// keyboard enter key ì¹˜ë©´ ì„œë²„ë¡œ ì „ì†¡
 	class TextSendAction implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			// Send buttonÀ» ´©¸£°Å³ª ¸Ş½ÃÁö ÀÔ·ÂÇÏ°í Enter key Ä¡¸é
+			// Send buttonì„ ëˆ„ë¥´ê±°ë‚˜ ë©”ì‹œì§€ ì…ë ¥í•˜ê³  Enter key ì¹˜ë©´
 			if (e.getSource() == btnSend || e.getSource() == txtInput) {
 				String msg = null;
 				// msg = String.format("[%s] %s\n", UserName, txtInput.getText());
 				msg = txtInput.getText();
 				SendMessage(msg);
-				txtInput.setText(""); // ¸Ş¼¼Áö¸¦ º¸³»°í ³ª¸é ¸Ş¼¼Áö ¾²´ÂÃ¢À» ºñ¿î´Ù.
-				txtInput.requestFocus(); // ¸Ş¼¼Áö¸¦ º¸³»°í Ä¿¼­¸¦ ´Ù½Ã ÅØ½ºÆ® ÇÊµå·Î À§Ä¡½ÃÅ²´Ù
-				if (msg.contains("/exit")) // Á¾·á Ã³¸®
+				txtInput.setText(""); // ë©”ì„¸ì§€ë¥¼ ë³´ë‚´ê³  ë‚˜ë©´ ë©”ì„¸ì§€ ì“°ëŠ”ì°½ì„ ë¹„ìš´ë‹¤.
+				txtInput.requestFocus(); // ë©”ì„¸ì§€ë¥¼ ë³´ë‚´ê³  ì»¤ì„œë¥¼ ë‹¤ì‹œ í…ìŠ¤íŠ¸ í•„ë“œë¡œ ìœ„ì¹˜ì‹œí‚¨ë‹¤
+				if (msg.contains("/exit")) // ì¢…ë£Œ ì²˜ë¦¬
 					System.exit(0);
 			}
 		}
@@ -244,10 +251,10 @@ public class JavaObjClientView extends JFrame {
 	class ImageSendAction implements ActionListener {
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			// ¾×¼Ç ÀÌº¥Æ®°¡ sendBtnÀÏ¶§ ¶Ç´Â textField ¿¡¼¼ Enter key Ä¡¸é
+			// ì•¡ì…˜ ì´ë²¤íŠ¸ê°€ sendBtnì¼ë•Œ ë˜ëŠ” textField ì—ì„¸ Enter key ì¹˜ë©´
 			if (e.getSource() == imgBtn) {
-				frame = new Frame("ÀÌ¹ÌÁöÃ·ºÎ");
-				fd = new FileDialog(frame, "ÀÌ¹ÌÁö ¼±ÅÃ", FileDialog.LOAD);
+				frame = new Frame("ì´ë¯¸ì§€ì²¨ë¶€");
+				fd = new FileDialog(frame, "ì´ë¯¸ì§€ ì„ íƒ", FileDialog.LOAD);
 				// frame.setVisible(true);
 				// fd.setDirectory(".\\");
 				fd.setVisible(true);
@@ -260,22 +267,36 @@ public class JavaObjClientView extends JFrame {
 		}
 	}
 
+	class StatusSelectAction implements ItemListener {
+		@Override
+		public void itemStateChanged(ItemEvent e) {
+			if (e.getStateChange() == ItemEvent.SELECTED) {
+	            ChatMsg obcm = new ChatMsg(UserName, "500", "Sleep");
+				SendObject(obcm);
+			}
+	        else {
+	            ChatMsg obcm = new ChatMsg(UserName, "600", "Wakeup");
+				SendObject(obcm);
+	        } 
+		}
+	}
+	
 	ImageIcon icon1 = new ImageIcon("src/icon1.jpg");
 
 	public void AppendIcon(ImageIcon icon) {
 		int len = textArea.getDocument().getLength();
-		// ³¡À¸·Î ÀÌµ¿
+		// ëìœ¼ë¡œ ì´ë™
 		textArea.setCaretPosition(len);
 		textArea.insertIcon(icon);
 	}
 
-	// È­¸é¿¡ Ãâ·Â
+	// í™”ë©´ì— ì¶œë ¥
 	public void AppendText(String msg) {
 		// textArea.append(msg + "\n");
 		//AppendIcon(icon1);
-		msg = msg.trim(); // ¾ÕµÚ blank¿Í \nÀ» Á¦°ÅÇÑ´Ù.
+		msg = msg.trim(); // ì•ë’¤ blankì™€ \nì„ ì œê±°í•œë‹¤.
 		int len = textArea.getDocument().getLength();
-		// ³¡À¸·Î ÀÌµ¿
+		// ëìœ¼ë¡œ ì´ë™
 		textArea.setCaretPosition(len);
 		textArea.replaceSelection(msg + "\n");
 	}
@@ -288,13 +309,13 @@ public class JavaObjClientView extends JFrame {
 		double ratio;
 		width = ori_icon.getIconWidth();
 		height = ori_icon.getIconHeight();
-		// Image°¡ ³Ê¹« Å©¸é ÃÖ´ë °¡·Î ¶Ç´Â ¼¼·Î 200 ±âÁØÀ¸·Î Ãà¼Ò½ÃÅ²´Ù.
+		// Imageê°€ ë„ˆë¬´ í¬ë©´ ìµœëŒ€ ê°€ë¡œ ë˜ëŠ” ì„¸ë¡œ 200 ê¸°ì¤€ìœ¼ë¡œ ì¶•ì†Œì‹œí‚¨ë‹¤.
 		if (width > 200 || height > 200) {
-			if (width > height) { // °¡·Î »çÁø
+			if (width > height) { // ê°€ë¡œ ì‚¬ì§„
 				ratio = (double) height / width;
 				width = 200;
 				height = (int) (width * ratio);
-			} else { // ¼¼·Î »çÁø
+			} else { // ì„¸ë¡œ ì‚¬ì§„
 				ratio = (double) width / height;
 				height = 200;
 				width = (int) (height * ratio);
@@ -308,10 +329,10 @@ public class JavaObjClientView extends JFrame {
 		textArea.setCaretPosition(len);
 		textArea.replaceSelection("\n");
 		// ImageViewAction viewaction = new ImageViewAction();
-		// new_icon.addActionListener(viewaction); // ³»ºÎÅ¬·¡½º·Î ¾×¼Ç ¸®½º³Ê¸¦ »ó¼Ó¹ŞÀº Å¬·¡½º·Î
+		// new_icon.addActionListener(viewaction); // ë‚´ë¶€í´ë˜ìŠ¤ë¡œ ì•¡ì…˜ ë¦¬ìŠ¤ë„ˆë¥¼ ìƒì†ë°›ì€ í´ë˜ìŠ¤ë¡œ
 	}
 
-	// Windows Ã³·³ message Á¦¿ÜÇÑ ³ª¸ÓÁö ºÎºĞÀº NULL ·Î ¸¸µé±â À§ÇÑ ÇÔ¼ö
+	// Windows ì²˜ëŸ¼ message ì œì™¸í•œ ë‚˜ë¨¸ì§€ ë¶€ë¶„ì€ NULL ë¡œ ë§Œë“¤ê¸° ìœ„í•œ í•¨ìˆ˜
 	public byte[] MakePacket(String msg) {
 		byte[] packet = new byte[BUF_LEN];
 		byte[] bb = null;
@@ -330,7 +351,7 @@ public class JavaObjClientView extends JFrame {
 		return packet;
 	}
 
-	// Server¿¡°Ô networkÀ¸·Î Àü¼Û
+	// Serverì—ê²Œ networkìœ¼ë¡œ ì „ì†¡
 	public void SendMessage(String msg) {
 		try {
 			// dos.writeUTF(msg);
@@ -356,11 +377,11 @@ public class JavaObjClientView extends JFrame {
 		}
 	}
 
-	public void SendObject(Object ob) { // ¼­¹ö·Î ¸Ş¼¼Áö¸¦ º¸³»´Â ¸Ş¼Òµå
+	public void SendObject(Object ob) { // ì„œë²„ë¡œ ë©”ì„¸ì§€ë¥¼ ë³´ë‚´ëŠ” ë©”ì†Œë“œ
 		try {
 			oos.writeObject(ob);
 		} catch (IOException e) {
-			// textArea.append("¸Ş¼¼Áö ¼Û½Å ¿¡·¯!!\n");
+			// textArea.append("ë©”ì„¸ì§€ ì†¡ì‹  ì—ëŸ¬!!\n");
 			AppendText("SendObject Error");
 		}
 	}
