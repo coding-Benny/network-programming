@@ -13,3 +13,23 @@
   <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/wecho_screenshot2.png" width="800" height="500">
   <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/wecho_screenshot1.png" width="800" height="500">
 </details>
+
+# NetP05
+- Windows ↔ Windows/Linux 양방향 파일 전송
+- 명령어 종류
+  - get, put, quit, dir, ldir, !cmd
+  <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/file_protocol.png" width="600" height="400">
+<details>
+  <summary>실행 결과</summary>
+  <ul>
+    <li>put</li>
+      <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/file_put.png" width="700" height="200">
+    <li>get</li>
+      <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/file_get.png" width="700" height="200">
+    <li>dir</li>
+      <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/file_dir.png" width="700" height="500">
+    <li>ldir</li>
+      <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/file_ldir.png" width="700" height="200">
+    <li>!ipconfig</li>
+      <img src="https://github.com/coding-Benny/network-programming/blob/master/practice/images/file_cmd.png" width="700" height="500">
+</details>
