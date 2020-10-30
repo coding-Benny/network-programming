@@ -16,6 +16,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
+import java.util.Vector;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -33,6 +34,9 @@ import java.awt.Frame;
 import java.awt.Image;
 import java.awt.Color;
 import javax.swing.border.LineBorder;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 import javax.swing.JToggleButton;
 import javax.swing.JList;
 import javax.swing.JCheckBox;
@@ -65,13 +69,16 @@ public class JavaObjClientView extends JFrame {
 	private FileDialog fd;
 	private JButton imgBtn;
 	private JCheckBox chckbxNewCheckBox;
+	
+	private JList<String> userList = new JList<String>();
+	Vector<String> member = new Vector<String>();
 
 	/**
 	 * Create the frame.
 	 */
 	public JavaObjClientView(String username, String ip_addr, String port_no) {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 391, 630);
+		setBounds(100, 100, 522, 630);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
@@ -128,8 +135,26 @@ public class JavaObjClientView extends JFrame {
 		
 		chckbxNewCheckBox = new JCheckBox("Sleep");
 		chckbxNewCheckBox.setFont(new Font("굴림체", Font.PLAIN, 14));
-		chckbxNewCheckBox.setBounds(154, 549, 62, 21);
+		chckbxNewCheckBox.setBounds(93, 549, 62, 21);
 		contentPane.add(chckbxNewCheckBox);
+		
+		JButton emojiBtn = new JButton("😀");
+		emojiBtn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
+		emojiBtn.setBounds(221, 539, 62, 40);
+		contentPane.add(emojiBtn);
+		
+		JScrollPane scrollPane2 = new JScrollPane();
+		scrollPane2.setBounds(374, 10, 120, 471);
+		scrollPane2.setBackground(Color.WHITE);
+		contentPane.add(scrollPane2);
+		
+		//list.setBorder(new LineBorder(new Color(0, 0, 0)));
+		//list.setBackground(Color.WHITE);
+		//list.setFont(new Font("굴림체", Font.PLAIN, 14));
+		//scrollPane2.setViewportView(getAllMembers());
+		//list.setBounds(374, 10, 120, 471);
+		scrollPane2.setViewportView(userList);
+		//contentPane.add(list);
 
 		try {
 			socket = new Socket(ip_addr, Integer.parseInt(port_no));
@@ -144,6 +169,8 @@ public class JavaObjClientView extends JFrame {
 
 			//SendMessage("/login " + UserName);
 			ChatMsg obcm = new ChatMsg(UserName, "100", "Hello");
+			member.add(UserName);
+			userList.setListData(member);
 			SendObject(obcm);
 			
 			ListenNetwork net = new ListenNetwork();
@@ -162,7 +189,7 @@ public class JavaObjClientView extends JFrame {
 			AppendText("connect error");
 		}
 	}
-
+	
 	// Server Message를 수신해서 화면에 표시
 	class ListenNetwork extends Thread {
 		public void run() {
@@ -204,11 +231,25 @@ public class JavaObjClientView extends JFrame {
 						continue;
 					switch (cm.getCode()) {
 					case "200": // chat message
+						if (msg.contains("입장")) {
+							String[] welcomeMsg = cm.getData().split("]");
+							String newUser = welcomeMsg[0].substring(1);
+							member.add(newUser);
+							userList.setListData(member);
+						}
 						AppendText(msg);
 						break;
 					case "300": // Image 첨부
 						AppendText("[" + cm.getId() + "]");
 						AppendImage(cm.img);
+						break;
+					case "800": // OldUser
+						String[] oldUserInfo = msg.split(" ");
+						String oldUserName = oldUserInfo[2];
+						if (!oldUserName.equals(UserName)) {
+							member.add(oldUserName);
+							userList.setListData(member);
+						}
 						break;
 					}
 				} catch (IOException e) {
@@ -298,6 +339,12 @@ public class JavaObjClientView extends JFrame {
 		int len = textArea.getDocument().getLength();
 		// 끝으로 이동
 		textArea.setCaretPosition(len);
+		
+		StyledDocument doc = textArea.getStyledDocument();
+		SimpleAttributeSet attributeSet = new SimpleAttributeSet();
+		StyleConstants.setAlignment(attributeSet, StyleConstants.ALIGN_LEFT);
+		doc.setParagraphAttributes(len, 1, attributeSet, false);
+			
 		textArea.replaceSelection(msg + "\n");
 	}
 
@@ -386,3 +433,4 @@ public class JavaObjClientView extends JFrame {
 		}
 	}
 }
+

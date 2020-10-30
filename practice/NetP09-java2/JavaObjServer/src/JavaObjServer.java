@@ -93,7 +93,6 @@ public class JavaObjServer extends JFrame {
 				try {
 					socket = new ServerSocket(Integer.parseInt(txtPortNumber.getText()));
 				} catch (NumberFormatException | IOException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 				AppendText("Chat Server Running..");
@@ -205,7 +204,7 @@ public class JavaObjServer extends JFrame {
 			AppendText("사용자 " + "[" + UserName + "] 퇴장. 현재 참가자 수 " + UserVec.size());
 		}
 
-		// 모든 User들에게 방송. 각각의 UserService Thread의 WriteONe() 을 호출한다.
+		// 모든 User들에게 방송. 각각의 UserService Thread의 WriteOne() 을 호출한다.
 		public void WriteAll(String str) {
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
@@ -222,7 +221,7 @@ public class JavaObjServer extends JFrame {
 			}
 		}
 
-		// 나를 제외한 User들에게 방송. 각각의 UserService Thread의 WriteONe() 을 호출한다.
+		// 나를 제외한 User들에게 방송. 각각의 UserService Thread의 WriteOne() 을 호출한다.
 		public void WriteOthers(String str) {
 			for (int i = 0; i < user_vc.size(); i++) {
 				UserService user = (UserService) user_vc.elementAt(i);
@@ -359,6 +358,11 @@ public class JavaObjServer extends JFrame {
 					if (cm.getCode().matches("100")) {
 						UserName = cm.getId();
 						UserStatus = "O"; // Online 상태
+						for(int i=0;i<UserVec.size();i++) {
+							UserService user = (UserService)UserVec.elementAt(i);
+							obcm = new ChatMsg("기존 접속자", "800", user.UserName);
+							oos.writeObject(obcm);
+						}
 						Login();
 					} else if (cm.getCode().matches("200")) {
 						msg = String.format("[%s] %s", cm.getId(), cm.getData());
@@ -408,7 +412,7 @@ public class JavaObjServer extends JFrame {
 						UserStatus = "S";
 					} else if (cm.getCode().matches("600")) {	/* status: wakeup */
 						UserStatus = "O";
-					}
+					} 
 				} catch (IOException e) {
 					AppendText("ois.readObject() error");
 					try {
@@ -428,3 +432,4 @@ public class JavaObjServer extends JFrame {
 	}
 
 }
+
