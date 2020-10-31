@@ -432,4 +432,3 @@ public class JavaObjServer extends JFrame {
 	}
 
 }
-

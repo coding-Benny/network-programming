@@ -237,7 +237,12 @@ public class JavaObjClientView extends JFrame {
 							member.add(newUser);
 							userList.setListData(member);
 						}
-						AppendText(msg);
+						if (UserName.equals(cm.getId()))
+							AppendMyText(msg);
+						else if ("SERVER".equals(cm.getId()))
+							AppendServerText(msg);
+						else
+							AppendText(msg);
 						break;
 					case "300": // Image 첨부
 						AppendText("[" + cm.getId() + "]");
@@ -347,6 +352,32 @@ public class JavaObjClientView extends JFrame {
 			
 		textArea.replaceSelection(msg + "\n");
 	}
+	
+	public void AppendMyText(String msg) {
+		msg = msg.trim();
+		int len = textArea.getStyledDocument().getLength();
+		textArea.setCaretPosition(len);
+		
+		StyledDocument doc = textArea.getStyledDocument();
+		SimpleAttributeSet attributeSet = new SimpleAttributeSet();
+		StyleConstants.setAlignment(attributeSet, StyleConstants.ALIGN_RIGHT);
+		doc.setParagraphAttributes(len, 1, attributeSet, false);
+		 
+		textArea.replaceSelection(msg + "\n");
+	}
+	
+	public void AppendServerText(String msg) {
+		msg = msg.trim();
+		int len = textArea.getStyledDocument().getLength();
+		textArea.setCaretPosition(len);
+		
+		StyledDocument doc = textArea.getStyledDocument();
+		SimpleAttributeSet attributeSet = new SimpleAttributeSet();
+		StyleConstants.setAlignment(attributeSet, StyleConstants.ALIGN_CENTER);
+		doc.setParagraphAttributes(len, 1, attributeSet, false);
+		 
+		textArea.replaceSelection(msg + "\n");
+	}
 
 	public void AppendImage(ImageIcon ori_icon) {
 		int len = textArea.getDocument().getLength();
@@ -433,4 +464,3 @@ public class JavaObjClientView extends JFrame {
 		}
 	}
 }
-
