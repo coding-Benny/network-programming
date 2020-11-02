@@ -77,3 +77,13 @@
 </details>
   
 # NetP09
+- 도전 과제
+  - 본인 Message는 카톡처럼 우측에 나오기
+  - 사용자 List 화면 추가하기
+  - /sleep, /wakeup 대신 GUI 버튼 사용하기(JComboBox, JCheckBox 등)
+  - 이모티콘 추가하기
+<details>
+  <summary>실행 결과</summary>
+      <img src="https://github.com/coding-Benny/network-programming/blob/master/images/challenge-server.PNG" width="200" height="300">
+      <img src="https://github.com/coding-Benny/network-programming/blob/master/images/challenge-client.PNG" width="1000" height="400">
+</details>
