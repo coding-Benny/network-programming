@@ -398,6 +398,9 @@ public class JavaObjServer extends JFrame {
 									break;
 								}
 							}
+						} else if (args[1].startsWith("(") && args[1].endsWith(")")) {
+							obcm = new ChatMsg(UserName, "900", args[1]);
+							oos.writeObject(obcm);
 						} else { // 일반 채팅 메시지
 							UserStatus = "O";
 							//WriteAll(msg + "\n"); // Write All

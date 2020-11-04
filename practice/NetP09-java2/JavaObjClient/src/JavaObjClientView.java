@@ -1,7 +1,6 @@
 // JavaObjClientView.java ObjecStram 기반 Client
 //실질적인 채팅 창
-import java.awt.BorderLayout;
-import java.awt.EventQueue;
+
 import java.awt.FileDialog;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -24,7 +23,6 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
-import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -33,14 +31,13 @@ import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Image;
 import java.awt.Color;
+
 import javax.swing.border.LineBorder;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
-import javax.swing.JToggleButton;
 import javax.swing.JList;
 import javax.swing.JCheckBox;
-import javax.swing.UIManager;
 
 public class JavaObjClientView extends JFrame {
 	/**
@@ -144,18 +141,16 @@ public class JavaObjClientView extends JFrame {
 		contentPane.add(emojiBtn);
 		
 		JScrollPane scrollPane2 = new JScrollPane();
-		scrollPane2.setBounds(374, 10, 120, 471);
+		scrollPane2.setBounds(374, 10, 120, 180);
 		scrollPane2.setBackground(Color.WHITE);
 		contentPane.add(scrollPane2);
-		
-		//list.setBorder(new LineBorder(new Color(0, 0, 0)));
-		//list.setBackground(Color.WHITE);
-		//list.setFont(new Font("굴림체", Font.PLAIN, 14));
-		//scrollPane2.setViewportView(getAllMembers());
-		//list.setBounds(374, 10, 120, 471);
 		scrollPane2.setViewportView(userList);
-		//contentPane.add(list);
 
+		JPanel panel = new JPanel();
+		panel.setBackground(Color.WHITE);
+		panel.setBounds(374, 200, 120, 281);
+		contentPane.add(panel);
+		
 		try {
 			socket = new Socket(ip_addr, Integer.parseInt(port_no));
 //			is = socket.getInputStream();
@@ -245,8 +240,18 @@ public class JavaObjClientView extends JFrame {
 							AppendText(msg);
 						break;
 					case "300": // Image 첨부
-						AppendText("[" + cm.getId() + "]");
-						AppendImage(cm.img);
+						if (UserName.equals(cm.getId())) {
+							AppendMyText("[" + cm.getId() + "]");
+							AppendImage(cm.img);
+						}
+						else if ("SERVER".equals(cm.getId())) {
+							AppendServerText("[" + cm.getId() + "]");
+							AppendImage(cm.img);
+						}
+						else {
+							AppendText("[" + cm.getId() + "]");
+							AppendImage(cm.img);
+						}
 						break;
 					case "800": // OldUser
 						String[] oldUserInfo = msg.split(" ");
@@ -254,6 +259,21 @@ public class JavaObjClientView extends JFrame {
 						if (!oldUserName.equals(UserName)) {
 							member.add(oldUserName);
 							userList.setListData(member);
+						}
+						break;
+					case "900": // emoji
+						if (UserName.equals(cm.getId())) {
+							AppendEmoji(msg);
+						}
+						else if ("SERVER".equals(cm.getId())) {
+							AppendServerText("[" + cm.getId() + "]");
+							AppendEmoji(msg);
+							AppendServerText("\n");
+						}
+						else {
+							AppendText("[" + cm.getId() + "]");
+							AppendEmoji(msg);
+							AppendText("\n");
 						}
 						break;
 					}
@@ -340,7 +360,7 @@ public class JavaObjClientView extends JFrame {
 	public void AppendText(String msg) {
 		// textArea.append(msg + "\n");
 		//AppendIcon(icon1);
-		msg = msg.trim(); // 앞뒤 blank와 \n을 제거한다.
+		msg = msg.trim(); // 앞뒤 blank와 \n을 제거한다.		
 		int len = textArea.getDocument().getLength();
 		// 끝으로 이동
 		textArea.setCaretPosition(len);
@@ -378,7 +398,19 @@ public class JavaObjClientView extends JFrame {
 		 
 		textArea.replaceSelection(msg + "\n");
 	}
-
+	
+	public void AppendEmoji(String msg) {
+		msg = msg.trim();
+		int len = textArea.getDocument().getLength();
+		String emojiMsg = msg.split(" ")[1];
+		String emojiName = emojiMsg.substring(1, emojiMsg.length()-1);
+		ImageIcon emoji = new ImageIcon("src/emoji/" + emojiName + ".png");
+		
+		ChatMsg obcm = new ChatMsg(UserName, "300", "EMOJI");
+		obcm.setImg(emoji);
+		SendObject(obcm);
+	}
+	
 	public void AppendImage(ImageIcon ori_icon) {
 		int len = textArea.getDocument().getLength();
 		textArea.setCaretPosition(len); // place caret at the end (with no selection)
