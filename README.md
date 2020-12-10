@@ -87,3 +87,19 @@
       <img src="https://github.com/coding-Benny/network-programming/blob/master/images/challenge-server.PNG" width="200" height="300">
       <img src="https://github.com/coding-Benny/network-programming/blob/master/images/challenge-client.PNG" width="1000" height="400">
 </details>
+
+# NetP10
+- 그림판 공유
+- 기능 추가
+  - Dot 대신 Line 그리기
+  - Color 선택하기
+  - 지우개 기능
+<details>
+  <summary>실행 결과</summary>
+  <ul>
+    <li>그림판 공유</li>
+     <img src="https://github.com/coding-Benny/network-programming/blob/master/images/share-painting.png" width="1200">
+    <li>기능 추가</li>
+      <img src="https://github.com/coding-Benny/network-programming/blob/master/images/advanced-painting.png" width="1200">
+  </ul>
+</details>
