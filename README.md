@@ -1,11 +1,14 @@
-# NetP04
+# network-programming
+C와 Java로 수행한 네트워크 소켓 프로그래밍 결과물입니다.
+
+## NetP04
 - 로그인 프로토콜 구현
 - 메뉴
-  <ol>
-  1. 소문자 → 대문자<br>
-  2. 대문자 → 소문자<br>
-  3. 소문자는 대문자로, 대문자는 소문자로<br>
-  4. 종료
+  <ol type="1">
+    <li>소문자 → 대문자</li>
+    <li>대문자 → 소문자</li>
+    <li>소문자는 대문자로, 대문자는 소문자로</li>
+    <li>종료</li>
   </ol>
   <img src="https://github.com/coding-Benny/network-programming/blob/master/images/wecho_protocol.png" width="500" height="400">
 <details>
@@ -14,7 +17,7 @@
   <img src="https://github.com/coding-Benny/network-programming/blob/master/images/wecho_screenshot1.png" width="800" height="500">
 </details>
 
-# NetP05
+## NetP05
 - Windows ↔ Windows/Linux 양방향 파일 전송
 - 명령어 종류
   - get, put, quit, dir, ldir, !cmd
@@ -34,7 +37,7 @@
       <img src="https://github.com/coding-Benny/network-programming/blob/master/images/file_cmd.png" width="700" height="500">
 </details>
 
-# NetP06
+## NetP06
 - /to, /sleep, /wakeup : ~~구현했는데 과제 변경으로 빠져버렸다..😭~~
 - 1:1 채팅<br>
   <img src="https://github.com/coding-Benny/network-programming/blob/master/images/user-to-user-chatting-protocol.png" width="500" height="350">
@@ -55,7 +58,7 @@
       <img src="https://github.com/coding-Benny/network-programming/blob/master/images/file_transfer.png" width="700" height="500">
 </details>
   
-# NetP07
+## NetP07
 - C로 구현했던 NetP06에서의 기능(입퇴장 알림, /exit, /list, /to, /sleep, /wakeup)들을 Java로 구현하기
 <details>
   <summary>실행 결과</summary>
@@ -66,7 +69,7 @@
       <img src="https://github.com/coding-Benny/network-programming/blob/master/images/java-chat-client.png" width="500" height="150">
 </details>
 
-# NetP-midterm
+## NetP-midterm
 - 레스토랑 POS Client/Server 프로그램
 - Client는 주문 모드(메뉴와 수량 정보)와 주방 모드(완료된 메뉴와 수량 정보)로 동작
 - Server는 주문 현황을 출력하고 Client에 전송<br>
@@ -76,7 +79,7 @@
       <img src="https://github.com/coding-Benny/network-programming/blob/master/images/restaurant-pos.png" width="600" height="500">
 </details>
   
-# NetP09
+## NetP09
 - 도전 과제
   - 본인 Message는 카톡처럼 우측에 나오기
   - 사용자 List 화면 추가하기
@@ -88,7 +91,7 @@
       <img src="https://github.com/coding-Benny/network-programming/blob/master/images/challenge-client.PNG" width="1000" height="400">
 </details>
 
-# NetP10
+## NetP10
 - 그림판 공유
 - 기능 추가
   - Dot 대신 Line 그리기
